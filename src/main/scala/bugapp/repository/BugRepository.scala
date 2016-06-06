@@ -1,6 +1,6 @@
 package bugapp.repository
 
-import bugapp.{Bug, Post}
+import bugapp.Bug
 
 import scala.concurrent.Future
 
