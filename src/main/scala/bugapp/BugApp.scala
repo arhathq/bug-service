@@ -4,7 +4,7 @@ import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import bugapp.repository.BugzillaRepository
+import bugapp.bugzilla.BugzillaRepository
 
 import scala.concurrent.ExecutionContext
 
