@@ -20,7 +20,12 @@ libraryDependencies ++= {
     "io.circe"               %% "circe-generic"                     % circeVersion,
     "io.circe"               %% "circe-parser"                      % circeVersion,
 
+    "org.apache.xmlgraphics"  % "fop"                               % "2.1",
+
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
     "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test"   
   )
 }
+
+
+

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<bug-report>
+    <report-date>2016-06-01T23:23:21Z</report-date>
+    <open-bugs>
+        <bug>
+            <id>1</id>
+            <severity>Important</severity>
+            <priority>P2</priority>
+            <status>ASSEMBLED</status>
+            <resolution>ASSIGNED</resolution>
+            <reporter>username1</reporter>
+            <opened>2016-06-01T23:23:21Z</opened>
+            <assignee>username2</assignee>
+            <changed></changed>
+            <summary>Bug summary here</summary>
+        </bug>
+        <bug>
+            <id>2</id>
+            <severity>Critical</severity>
+            <priority>P1</priority>
+            <status>ASSEMBLED</status>
+            <resolution>ASSIGNED</resolution>
+            <reporter>username1</reporter>
+            <opened>2016-06-02T13:12:21Z</opened>
+            <assignee>username2</assignee>
+            <changed></changed>
+            <summary>Bug summary here</summary>
+        </bug>
+    </open-bugs>
+</bug-report>
