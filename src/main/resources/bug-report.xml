@@ -99,6 +99,13 @@
             <opened>6</opened>
             <total>126</total>
         </reporter-bugs>
+        <reporter-bugs>
+            <reporter>Grand Total</reporter>
+            <closed>164</closed>
+            <invalid>158</invalid>
+            <opened>16</opened>
+            <total>338</total>
+        </reporter-bugs>
     </reporter-bugs-by-15-weeks>
     <reporter-bugs-by-this-week>
         <reporter-bugs>
@@ -115,5 +122,104 @@
             <opened>3</opened>
             <total>5</total>
         </reporter-bugs>
+        <reporter-bugs>
+            <reporter>Grand Total</reporter>
+            <closed>7</closed>
+            <invalid>4</invalid>
+            <opened>6</opened>
+            <total>17</total>
+        </reporter-bugs>
     </reporter-bugs-by-this-week>
+    <priority-bugs-by-this-week>
+        <priority-bugs>
+            <reporter>not prioritized</reporter>
+            <closed>2</closed>
+            <invalid/>
+            <opened>1</opened>
+            <total>3</total>
+        </priority-bugs>
+        <priority-bugs>
+            <reporter>P1</reporter>
+            <closed>1</closed>
+            <invalid/>
+            <opened>1</opened>
+            <total>2</total>
+        </priority-bugs>
+        <priority-bugs>
+            <reporter>P2</reporter>
+            <closed>6</closed>
+            <invalid>6</invalid>
+            <opened>8</opened>
+            <total>20</total>
+        </priority-bugs>
+        <priority-bugs>
+            <reporter>P3</reporter>
+            <closed/>
+            <invalid>1</invalid>
+            <opened>2</opened>
+            <total>3</total>
+        </priority-bugs>
+        <priority-bugs>
+            <reporter>Grand Total</reporter>
+            <closed>9</closed>
+            <invalid>7</invalid>
+            <opened>12</opened>
+            <total>28</total>
+        </priority-bugs>
+    </priority-bugs-by-this-week>
+    <open-bugs-by-product>
+        <product-bugs>
+            <product>Product 1</product>
+            <np/>
+            <p1/>
+            <p2>5</p2>
+            <p3>29</p3>
+            <total>34</total>
+        </product-bugs>
+        <product-bugs>
+            <product>Product 2</product>
+            <np/>
+            <p1/>
+            <p2>2</p2>
+            <p3>3</p3>
+            <total>5</total>
+        </product-bugs>
+        <product-bugs>
+            <product>Product 3</product>
+            <np/>
+            <p1>1</p1>
+            <p2>1</p2>
+            <p3>1</p3>
+            <total>3</total>
+        </product-bugs>
+        <product-bugs>
+            <product>Grand Total</product>
+            <np/>
+            <p1>1</p1>
+            <p2>8</p2>
+            <p3>33</p3>
+            <total>42</total>
+        </product-bugs>
+    </open-bugs-by-product>
+    <top-asignees>
+        <asignee>
+            <name>username1</name>
+            <count>10</count>
+        </asignee>
+        <asignee>
+            <name>username2</name>
+            <count>7</count>
+        </asignee>
+        <asignee>
+            <name>username3</name>
+            <count>5</count>
+        </asignee>
+        <asignee>
+            <name>username4</name>
+            <count>5</count>
+        </asignee>
+    </top-asignees>
+    <week-summary-report>
+
+    </week-summary-report>
 </bug-reports>
