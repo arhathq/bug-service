@@ -22,6 +22,8 @@ libraryDependencies ++= {
 
     "org.apache.xmlgraphics"  % "fop"                               % "2.1",
 
+    "org.jfree"               % "jfreechart"                        % "1.0.19",
+
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
     "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test"   
   )

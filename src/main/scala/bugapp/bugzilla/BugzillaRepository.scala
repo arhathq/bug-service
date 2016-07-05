@@ -6,7 +6,7 @@ import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.Flow
 import bugapp._
 import bugapp.http.HttpClient
-import bugapp.repository.BugRepository
+import bugapp.repository.{Bug, BugRepository, BugsError}
 import de.heikoseeberger.akkahttpcirce.CirceSupport
 
 import scala.concurrent.{ExecutionContext, Future}
