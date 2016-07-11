@@ -4,17 +4,36 @@ import com.typesafe.config.ConfigFactory
 
 trait Config {
 
-  private val config = ConfigFactory.load()
-  private val httpConfig = config.getConfig("http")
-  private val bugzillaConfig = config.getConfig("bugzilla")
+  private[bugapp] val config = ConfigFactory.load()
 
-  val akkaConfig = config.getConfig("akka")
+}
+
+trait HttpConfig extends Config {
+
+  private val httpConfig = config.getConfig("http")
 
   val httpHost = httpConfig.getString("host")
   val httpPort = httpConfig.getInt("port")
+}
+
+trait BugzillaConfig extends Config {
+
+  private val bugzillaConfig = config.getConfig("bugzilla")
 
   val bugzillaUrl = bugzillaConfig.getString("url")
   val bugzillaUsername = bugzillaConfig.getString("username")
   val bugzillaPassword = bugzillaConfig.getString("password")
+
+}
+
+trait AkkaConfig extends Config {
+
+  val akkaConfig = config.getConfig("akka")
+
+}
+
+trait ReportConfig extends Config {
+
+  val maxJobs = 10
 
 }

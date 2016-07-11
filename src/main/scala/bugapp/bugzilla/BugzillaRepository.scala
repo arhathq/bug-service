@@ -11,7 +11,7 @@ import de.heikoseeberger.akkahttpcirce.CirceSupport
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with Config with CirceSupport {
+class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with BugzillaConfig with CirceSupport {
 
   val httpClient = new HttpClient(bugzillaUrl)
 

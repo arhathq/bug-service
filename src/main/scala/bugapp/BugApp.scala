@@ -11,7 +11,7 @@ import scala.concurrent.ExecutionContext
 /**
   * @author Alexander Kuleshov
   */
-object BugApp extends App with Config {
+object BugApp extends App with AkkaConfig with HttpConfig {
 
   private implicit val system = ActorSystem("BugApp", akkaConfig)
   protected implicit val executor: ExecutionContext = system.dispatcher
