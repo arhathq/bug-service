@@ -5,7 +5,7 @@ import bugapp.bugzilla.{BugzillaParams, BugzillaRequest}
 /**
   * @author Alexander Kuleshov
   */
-class CirceJsonTests {
+object CirceJsonTests extends App {
   import io.circe.{ Decoder, Encoder, Json => JsonC }
   import io.circe.generic.semiauto._
   import io.circe.jawn._
@@ -22,14 +22,24 @@ class CirceJsonTests {
   //  var err = jawn.decode[GetBugsResponse](jsonBugzErr).valueOr(throw _)
   //  println(err)
 
-  //  case class Params(username: String, password: String, status: List[String], cf_target_milestone: List[String], cf_production: List[String])
+  case class Params(username: String, password: Option[String] = None, status: Option[List[String]] = None)
+  object Params {
+    def apply(username: String): Params = new Params(username)
+  }
+
+  val p = Params("user1")
+  println(p.asJson.noSpaces)
+
+//  val p1 = Params(username = "user1")
+//  println(p1.asJson.noSpaces)
+
   //  case class Param(key: String, value: String)
   //  object Param {
   //    implicit val encodeFoo: Encoder[Param] = deriveEncoder
   //  }
 
-  val params = BugzillaParams.create("username", "pwd")
-  val request = new BugzillaRequest("methodName", params)
+  val params = BugzillaParams("username", "pwd")
+  val request = BugzillaRequest("methodName", params)
   println(List(request.params).asJson.noSpaces)
 
   //  val p = Params("user", "qqq", List("RESOLVED","VERIFIED","CLOSED"), List("2016.1.0","2016.2.0","2016.2.0+Dev1","2016.2.0+Dev2","2016.2.0+Dev3","2016.2.0+Dev4","2016.2.0+Dev5","2016.2.1","2016.3.0"), List())

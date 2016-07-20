@@ -21,11 +21,11 @@ class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMater
    * {"error":{"message":"When using JSON-RPC over GET, you must specify a 'method' parameter. See the documentation at docs/en/html/api/Bugzilla/WebService/Server/JSONRPC.html","code":32000},"id":"http://192.168.0.2","result":null}
    */
   override def getBugs(statuses: List[String], milestones: List[String], environments: List[String]): Future[Seq[Bug]] = {
-    val params = BugzillaParams.create(
+    val params = BugzillaParams(
       bugzillaUsername,
       bugzillaPassword,
-      List("RESOLVED","VERIFIED","CLOSED"),
-      List("2016.1.0","2016.2.0","2016.2.0+Dev1","2016.2.0+Dev2","2016.2.0+Dev3","2016.2.0+Dev4","2016.2.0+Dev5","2016.2.1","2016.3.0"))
+      Some(List("RESOLVED","VERIFIED","CLOSED")),
+      Some(List("2016.1.0","2016.2.0","2016.2.0+Dev1","2016.2.0+Dev2","2016.2.0+Dev3","2016.2.0+Dev4","2016.2.0+Dev5","2016.2.1","2016.3.0")))
     getBugs(BugzillaRequest("Bug.search", params))
   }
 
@@ -53,7 +53,7 @@ class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMater
         return Future.failed(throw BugsError(response.error.get.message))
       else {
         response.result.get.bugs.map(b =>
-          new Bug(b.id.toString, b.severity, b.priority, b.status,
+          Bug(b.id.toString, b.severity, b.priority, b.status,
             b.resolution.getOrElse("UNRESOLVED"), b.creator, b.creation_time,
             b.assigned_to.getOrElse("UNASSIGNED"), b.last_change_time.getOrElse(b.creation_time),
             b.product.getOrElse("---"), b.component.getOrElse("---"),
