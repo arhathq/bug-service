@@ -22,6 +22,8 @@ object BugApp extends App with AkkaConfig with HttpConfig {
 
   val restService = new RestApiService(bugRepository)
 
+  log.debug("Starting App...")
+
   Http().bindAndHandle(restService.routes, httpHost, httpPort)
 
 }

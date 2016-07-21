@@ -1,23 +1,22 @@
 package bugapp.http
 
 import akka.actor.{ActorSystem, Props}
-import akka.http.scaladsl.model.HttpResponse
-import akka.http.scaladsl.model.StatusCodes._
+import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
 import akka.util.Timeout
 import bugapp.report.ReportProtocol.GenerateReport
 import bugapp.report.ReportActor
 import bugapp.repository.BugRepository
-import de.heikoseeberger.akkahttpcirce.CirceSupport
-import io.circe.generic.auto._
-import io.circe.syntax._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
-import scala.util.{Failure, Success}
 
-class AppRoute(private val bugRepository: BugRepository)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext) extends CirceSupport {
+class AppRoute(private val bugRepository: BugRepository)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext) extends ResponseSupport {
+
+  import io.circe.generic.auto._
+
+  lazy val log: LoggingAdapter = Logging(system, getClass)
 
   val reportActor = system.actorOf(Props(new ReportActor(bugRepository)), "reportActor")
 
@@ -26,23 +25,26 @@ class AppRoute(private val bugRepository: BugRepository)(implicit val system: Ac
   val routes =
     path("bugs") {
       get {
-        onComplete(bugRepository.getBugs().map(_.asJson)) {
-          case Success(value) => complete(value)
-          case Failure(ex)    =>
-            complete(HttpResponse(InternalServerError, entity = ErrorMessage(ex.getMessage).asJson.noSpaces))
+        extractRequest { req =>
+          sendResponse(bugRepository.getBugs())
         }
       }
     } ~
-    path("report" / IntNumber) { weeks =>
+    path("openbugs") {
       get {
-        onComplete(ask(reportActor, GenerateReport(weeks)).mapTo[String]) {
-          case Success(value) => complete(value)
-          case Failure(ex)    =>
-            complete(HttpResponse(InternalServerError, entity = ErrorMessage(ex.getMessage).asJson.noSpaces))
+        extractRequest { req =>
+          sendResponse(bugRepository.getOpenBugs())
         }
-
+      }
+    } ~
+    path("report" / IntNumber ) { weeks =>
+      get {
+        extractRequest { req =>
+          sendResponse(ask(reportActor, GenerateReport(weeks)).mapTo[String])
+        }
       }
     }
-}
 
-case class ErrorMessage(error: String)
+  override def logger: LoggingAdapter = log
+
+}

@@ -30,7 +30,8 @@ class HttpClient(url: String)(implicit val s: ActorSystem, implicit val m: Actor
       Http().cachedHostConnectionPoolHttps[Context](hostName, port, ConnectionContext.https(sslContext))
   }
 
-  def execute[Request, Response](uri: String, request: Request)(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
+  /*
+  def executeHttp[Request, Response](uri: String, request: Request)(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
 
     val outbound = Flow[(Request, Any)].map {
       case (req, context) =>
@@ -38,10 +39,9 @@ class HttpClient(url: String)(implicit val s: ActorSystem, implicit val m: Actor
         (httpRequest, context)
     }
 
-    val flow = BidiFlow.fromFlows(outbound, inbound[Response, Any]).join(connectionFlow[Any])
-
-    run[Request, Response](flow)(request)
+    execute[Request, Response](request, outbound)
   }
+  */
 
   def execute[Request, Response](request: Request, flow: Flow[(Any, Any), (HttpRequest, Any), NotUsed])(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
 

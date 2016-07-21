@@ -46,8 +46,8 @@ case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
                           status: Option[List[String]] = None,
                           priority: Option[List[String]] = None,
-                          cf_target_milestone: Option[List[String]] = None,
-                          cf_production: Option[List[String]] = None)
+//                          cf_target_milestone: Option[List[String]] = Some(List()),
+                          cf_production: Option[String] = Some("Production"))
 object BugzillaParams {
   implicit val encodeFoo: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
 

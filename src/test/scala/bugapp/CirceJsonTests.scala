@@ -30,20 +30,21 @@ object CirceJsonTests extends App {
   val p = Params("user1")
   println(p.asJson.noSpaces)
 
-//  val p1 = Params(username = "user1")
-//  println(p1.asJson.noSpaces)
+  case class Foo(ab: Option[Int])
+  val p1 = Foo(Some(1))
+  println(p1.asJson.noSpaces)
 
   //  case class Param(key: String, value: String)
   //  object Param {
   //    implicit val encodeFoo: Encoder[Param] = deriveEncoder
   //  }
 
-  val params = BugzillaParams("username", "pwd")
-  val request = BugzillaRequest("methodName", params)
-  println(List(request.params).asJson.noSpaces)
-
-  //  val p = Params("user", "qqq", List("RESOLVED","VERIFIED","CLOSED"), List("2016.1.0","2016.2.0","2016.2.0+Dev1","2016.2.0+Dev2","2016.2.0+Dev3","2016.2.0+Dev4","2016.2.0+Dev5","2016.2.1","2016.3.0"), List())
-  //  println(List(p).asJson.noSpaces)
+  val openBugs = BugzillaParams(
+    "username1",
+    "sadsf444",
+    statuses = Some(List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")),
+    priorities = Some(List("P1", "P2")))
+  println(List(openBugs).asJson.noSpaces)
 
   implicit val encodeStringorList: Encoder[Either[String, List[String]]] =
     Encoder.instance(_.fold(_.asJson, _.asJson))

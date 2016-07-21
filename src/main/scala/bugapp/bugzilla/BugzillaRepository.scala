@@ -29,16 +29,29 @@ class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMater
     getBugs(BugzillaRequest("Bug.search", params))
   }
 
+  override def getOpenBugs(statuses: List[String], priorities: List[String]): Future[Seq[Bug]] = {
+    val params = BugzillaParams(
+      bugzillaUsername,
+      bugzillaPassword,
+      statuses = Some(List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")),
+      priorities = Some(List("P1", "P2")))
+    getBugs(BugzillaRequest("Bug.search", params))
+  }
+
   private def getBugs(request: BugzillaRequest): Future[Seq[Bug]] = {
     import io.circe.generic.auto._
     import io.circe.syntax._
+
+    val paramsJson = List(request.params).asJson.noSpaces
+
+    s.log.debug(paramsJson)
 
     val getBugsUri = Uri(bugzillaUrl).
       withPath(Uri.Path("/jsonrpc.cgi")).
       withQuery(Uri.Query(
         Map(
           "method" -> request.method,
-          "params" -> List(request.params).asJson.noSpaces
+          "params" -> paramsJson
         )
       ))
 
@@ -62,4 +75,13 @@ class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMater
     }
 
   }
+
+  //query1
+  val openStatuses = List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")
+  val openPriorities = List("P1", "P2")
+  val environment = "Production"
+  val excludedProducts = List("CRF Hot Deploy - Prod DB", "Ecomm Deploy - Prod DB")
+  val excludedComponents = List("Dataload Failed", "New Files Arrived", "Data Consistency")
+
 }
+
