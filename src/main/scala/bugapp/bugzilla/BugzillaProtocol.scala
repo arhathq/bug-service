@@ -44,15 +44,17 @@ case class BugzillaBug(id: Int,
 
 case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
-                          status: Option[List[String]] = None,
-                          priority: Option[List[String]] = None,
+                          creation_time: Option[String],
+//                          status: Option[List[String]] = None,
+//                          priority: Option[List[String]] = None,
 //                          cf_target_milestone: Option[List[String]] = Some(List()),
                           cf_production: Option[String] = Some("Production"))
 object BugzillaParams {
   implicit val encodeFoo: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
 
-  def apply(username: String, password: String, statuses: Option[List[String]]) = new BugzillaParams(username, password, statuses)
-  def apply(username: String, password: String, statuses: Option[List[String]], priorities: Option[List[String]]) = new BugzillaParams(username, password, statuses, priorities)
+  def apply(username: String, password: String, startDate: Option[String]) = new BugzillaParams(username, password, startDate)
+//  def apply(username: String, password: String, startDate: Option[String], statuses: Option[List[String]]) = new BugzillaParams(username, password, startDate, statuses)
+//  def apply(username: String, password: String, statuses: Option[List[String]], priorities: Option[List[String]]) = new BugzillaParams(username, password,  statuses, priorities)
 }
 
 case class BugzillaRequest(method: String, params: BugzillaParams)

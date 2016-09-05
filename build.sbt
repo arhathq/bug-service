@@ -25,6 +25,10 @@ libraryDependencies ++= {
 
     "org.apache.xmlgraphics"  % "fop"                               % "2.1",
 
+    "net.sf.saxon"            % "Saxon-HE"                          % "9.7.0-8",
+
+    "commons-codec"           % "commons-codec"                     % "1.10",
+
     "org.jfree"               % "jfreechart"                        % "1.0.19",
 
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,

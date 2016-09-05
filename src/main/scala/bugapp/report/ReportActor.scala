@@ -43,7 +43,7 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
       log.info(s"Job [$jobId] completed, Workers $jobs")
       val client = senders get jobId
       senders -= jobId
-      client.get ! s"{report: 'OK'}"
+      client.get ! s"{status: 'OK', jobdId: '$jobId', reportId: '$reportId'}"
     }
   }
 

@@ -1,8 +1,11 @@
 package bugapp.report;
 
+import org.apache.commons.codec.binary.Base64;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.encoders.EncoderUtil;
+import org.jfree.chart.encoders.ImageFormat;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.AreaRendererEndType;
@@ -12,6 +15,7 @@ import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Arrays;
 import java.util.List;
@@ -20,6 +24,8 @@ import java.util.List;
  * @author Alexander Kuleshov
  */
 public class ChartGenerator {
+
+    private static final String imageFormat = ImageFormat.JPEG;
 
     /*
         <P1>
@@ -33,7 +39,7 @@ public class ChartGenerator {
             <2015-40>8</2015-40>
         </P2>
     */
-    public void generateOpenHighPriorityBugs(String filename, CategoryDataset dataset) throws Exception {
+    public String generateBase64OpenHighPriorityBugs(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createStackedBarChart3D(
                 "Production, Open, P1/P2 by Week",
                 "", "Bug Count",
@@ -41,7 +47,7 @@ public class ChartGenerator {
                 true, true, false
         );
 
-        saveChart(640, 480, filename, chart);
+        return toBase64(chartToBytes(640, 480, chart));
     }
 
     /*
@@ -100,7 +106,7 @@ public class ChartGenerator {
             <2015-40></2015-40>
         </Invalid>
      */
-    public void generateBugsFromLast15Weeks(String filename, CategoryDataset dataset) throws Exception {
+    public String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createAreaChart(
                 "Prod Support Bugs - Last 15 Weeks",
                 "", "Bug Count",
@@ -115,7 +121,7 @@ public class ChartGenerator {
         renderer.setSeriesPaint(2, Color.pink);
         renderer.setEndType(AreaRendererEndType.TRUNCATE);
 
-        saveChart(1024, 480, filename, chart);
+        return toBase64(chartToBytes(640, 480, chart));
     }
 
     /*
@@ -130,7 +136,7 @@ public class ChartGenerator {
             <2015-06-03>4</2015-06-03>
         </Resolved>
      */
-    public void generateNewVsResolvedBugs(String filename, CategoryDataset dataset) throws Exception {
+    public String generateBase64NewVsResolvedBugs(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createBarChart("", "", "", dataset, PlotOrientation.VERTICAL, true, true, false);
 
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
@@ -140,13 +146,21 @@ public class ChartGenerator {
         renderer.setMaximumBarWidth(3.0);
         renderer.setItemMargin(0.0);
 
-        saveChart(640, 480, filename, chart);
+        return toBase64(chartToBytes(640, 480, chart));
     }
-
 
     private void saveChart(int width, int height, String filename, JFreeChart chart) throws Exception {
         File file = new File(filename);
         ChartUtilities.saveChartAsJPEG(file, chart, width, height);
+    }
+
+    private byte[] chartToBytes(int width, int height, JFreeChart chart) throws Exception {
+        BufferedImage image = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_RGB, null);
+        return EncoderUtil.encode(image, imageFormat);
+    }
+
+    private String toBase64(byte[] bytes) throws Exception {
+        return Base64.encodeBase64String(bytes);
     }
 
     public static void main(String[] args)throws Exception {
@@ -170,7 +184,7 @@ public class ChartGenerator {
         openHighPriorityBugs.addValue(2.0, p2, week2);
         openHighPriorityBugs.addValue(8.0, p2, week3);
 
-        chartGenerator.generateOpenHighPriorityBugs("BarChart.jpeg", openHighPriorityBugs);
+        System.out.println(chartGenerator.generateBase64OpenHighPriorityBugs(openHighPriorityBugs));
 
         String open = "Open";
         String closed = "Closed";
@@ -188,7 +202,7 @@ public class ChartGenerator {
             bugsFromLast15Weeks.addValue(closedBugs[i], closed, weeks.get(i));
             bugsFromLast15Weeks.addValue(invalidBugs[i], invalid, weeks.get(i));
         }
-        chartGenerator.generateBugsFromLast15Weeks("15LastWeeks.jpeg", bugsFromLast15Weeks);
+        System.out.println(chartGenerator.generateBase64BugsFromLast15Weeks(bugsFromLast15Weeks));
 
         String[] days = new String[] {"2015-06-01", "2015-06-02", "2015-06-03", "2015-06-04", "2015-06-05", "2015-06-06", "2015-06-07"};
         int[] newBugs = new int[] {11, 13, 7, 24, 9, 17, 8};
@@ -200,6 +214,6 @@ public class ChartGenerator {
             newVsResolved.addValue(resolvedBugs[i], "Resolved", days[i]);
         }
 
-        chartGenerator.generateNewVsResolvedBugs("NewVsResolved.jpeg", newVsResolved);
+        System.out.println(chartGenerator.generateBase64NewVsResolvedBugs(newVsResolved));
     }
 }

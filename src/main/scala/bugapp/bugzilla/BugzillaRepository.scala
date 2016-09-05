@@ -1,19 +1,18 @@
 package bugapp.bugzilla
 
 import akka.actor.ActorSystem
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, Uri}
+import akka.event.{Logging, LoggingAdapter}
+import akka.http.scaladsl.model.{HttpMethods, Uri}
 import akka.stream.ActorMaterializer
-import akka.stream.scaladsl.Flow
 import bugapp._
 import bugapp.http.HttpClient
-import bugapp.repository.{Bug, BugRepository, BugsError}
-import de.heikoseeberger.akkahttpcirce.CirceSupport
+import bugapp.repository.{Bug, BugRepository}
 
 import scala.concurrent.{ExecutionContext, Future}
 
-class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with BugzillaConfig with CirceSupport {
+class BugzillaRepository(httpClient: HttpClient)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with BugzillaConfig {
 
-  val httpClient = new HttpClient(bugzillaUrl)
+  protected val log: LoggingAdapter = Logging(s, getClass)
 
   /**
    * method "Bug.search"
@@ -24,56 +23,51 @@ class BugzillaRepository(implicit val s: ActorSystem, implicit val m: ActorMater
     val params = BugzillaParams(
       bugzillaUsername,
       bugzillaPassword,
-      Some(List("RESOLVED","VERIFIED","CLOSED")),
-      Some(List("2016.1.0","2016.2.0","2016.2.0+Dev1","2016.2.0+Dev2","2016.2.0+Dev3","2016.2.0+Dev4","2016.2.0+Dev5","2016.2.1","2016.3.0")))
-    getBugs(BugzillaRequest("Bug.search", params))
+      Some("2016-04-01")
+    )
+    getBugs(BugzillaRequest("Bug.search", params)).map { s =>
+      Seq[Bug]()
+    }
   }
 
   override def getOpenBugs(statuses: List[String], priorities: List[String]): Future[Seq[Bug]] = {
     val params = BugzillaParams(
       bugzillaUsername,
       bugzillaPassword,
-      statuses = Some(List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")),
-      priorities = Some(List("P1", "P2")))
-    getBugs(BugzillaRequest("Bug.search", params))
+      Some("2016-04-01")
+    )
+    getBugs(BugzillaRequest("Bug.search", params)).map { s =>
+      Seq[Bug]()
+    }
   }
 
-  private def getBugs(request: BugzillaRequest): Future[Seq[Bug]] = {
+  private def toJsonString(params: BugzillaParams): String = {
     import io.circe.generic.auto._
     import io.circe.syntax._
 
-    val paramsJson = List(request.params).asJson.noSpaces
+    List(params).asJson.noSpaces
+  }
 
-    s.log.debug(paramsJson)
-
-    val getBugsUri = Uri(bugzillaUrl).
+  private def uri(request: BugzillaRequest): Uri = {
+    Uri(bugzillaUrl).
       withPath(Uri.Path("/jsonrpc.cgi")).
       withQuery(Uri.Query(
         Map(
           "method" -> request.method,
-          "params" -> paramsJson
+          "params" -> toJsonString(request.params)
         )
       ))
+  }
 
-    val outbound = Flow[(Any, Any)].map {
-      case (req, context) =>
-        val httpRequest = HttpRequest(uri = getBugsUri, method = HttpMethods.GET)
-        (httpRequest, context)
+  private def getBugs(request: BugzillaRequest): Future[String] = {
+//    import io.circe.generic.auto._
+//    import io.circe.syntax._
+
+
+    httpClient.execute[String](uri(request), HttpMethods.GET).map { response =>
+      log.debug(response.toString)
+      response
     }
-
-    httpClient.execute[Any, BugzillaResponse](None, outbound).map { response =>
-      if (response.error.isDefined)
-        return Future.failed(throw BugsError(response.error.get.message))
-      else {
-        response.result.get.bugs.map(b =>
-          Bug(b.id.toString, b.severity, b.priority, b.status,
-            b.resolution.getOrElse("UNRESOLVED"), b.creator, b.creation_time,
-            b.assigned_to.getOrElse("UNASSIGNED"), b.last_change_time.getOrElse(b.creation_time),
-            b.product.getOrElse("---"), b.component.getOrElse("---"),
-            b.cf_production.getOrElse("---"), b.summary, b.platform))
-      }
-    }
-
   }
 
   //query1

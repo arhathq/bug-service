@@ -42,8 +42,8 @@ object CirceJsonTests extends App {
   val openBugs = BugzillaParams(
     "username1",
     "sadsf444",
-    statuses = Some(List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")),
-    priorities = Some(List("P1", "P2")))
+    Some("2016-01-01")
+  )
   println(List(openBugs).asJson.noSpaces)
 
   implicit val encodeStringorList: Encoder[Either[String, List[String]]] =

@@ -1,13 +1,14 @@
 package bugapp.http
 
-import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.http.scaladsl.{ConnectionContext, Http}
-import akka.http.scaladsl.model.{HttpMethods, HttpRequest, HttpResponse, Uri}
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.settings.ConnectionPoolSettings
 import akka.http.scaladsl.unmarshalling.{Unmarshal, _}
 import akka.stream.ActorMaterializer
 import akka.stream.scaladsl.{BidiFlow, Flow, Sink, Source}
 import bugapp.utils.DummySSLFactory
+import com.typesafe.config.Config
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.util.{Failure, Success, Try}
@@ -15,7 +16,7 @@ import scala.util.{Failure, Success, Try}
 /**
   * @author Alexander Kuleshov
   */
-class HttpClient(url: String)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) {
+class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) {
   val uri = Uri(url)
 
   lazy val hostName = uri.authority.host.address()
@@ -24,30 +25,27 @@ class HttpClient(url: String)(implicit val s: ActorSystem, implicit val m: Actor
 
   lazy val sslContext = new DummySSLFactory().getSSLContext
 
+  val settings = ConnectionPoolSettings(config)
+
   def connectionFlow[Context]: Flow[(HttpRequest, Context), (Try[HttpResponse], Context), Any] = scheme match {
-    case "http" => Http().cachedHostConnectionPool[Context](hostName, port)
+    case "http" =>
+      Http().cachedHostConnectionPool[Context](hostName, port, settings)
+
     case "https" =>
-      Http().cachedHostConnectionPoolHttps[Context](hostName, port, ConnectionContext.https(sslContext))
+      Http().cachedHostConnectionPoolHttps[Context](hostName, port, ConnectionContext.https(sslContext), settings)
   }
 
-  /*
-  def executeHttp[Request, Response](uri: String, request: Request)(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
+  def execute[Response](uri: Uri, method: HttpMethod)(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
 
-    val outbound = Flow[(Request, Any)].map {
+    val outbound = Flow[(Any, Any)].map {
       case (req, context) =>
-        val httpRequest = HttpRequest(uri = uri, method = HttpMethods.GET)
+        val httpRequest = HttpRequest(method, uri)
         (httpRequest, context)
     }
 
-    execute[Request, Response](request, outbound)
-  }
-  */
+    val executionFlow = BidiFlow.fromFlows(outbound, inbound[Response, Any]).join(connectionFlow[Any])
 
-  def execute[Request, Response](request: Request, flow: Flow[(Any, Any), (HttpRequest, Any), NotUsed])(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
-
-    val executionFlow = BidiFlow.fromFlows(flow, inbound[Response, Any]).join(connectionFlow[Any])
-
-    run[Request, Response](executionFlow)(request)
+    run[Response](executionFlow)(None)
   }
 
   private def inbound[Response, Context](implicit um: FromEntityUnmarshaller[Response]): Flow[(Try[HttpResponse], Context), (Try[Response], Context), Any] = {
@@ -61,7 +59,7 @@ class HttpClient(url: String)(implicit val s: ActorSystem, implicit val m: Actor
     }.flatMapConcat(Source.fromFuture)
   }
 
-  private def run[Request, Response](flow: Flow[(Request, Any), (Try[Response], Any), Any])(request: Request): Future[Response] = {
+  private def run[Response](flow: Flow[(Any, Any), (Try[Response], Any), Any])(request: Any): Future[Response] = {
     Source.single((request, None))
       .via(flow)
       .runWith(Sink.head)(m)

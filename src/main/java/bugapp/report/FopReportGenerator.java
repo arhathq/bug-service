@@ -26,7 +26,7 @@ public class FopReportGenerator {
     public FopReportGenerator(URI configUri) {
         try {
             fopFactory = FopFactory.newInstance(configUri);
-            transformerFactory = TransformerFactory.newInstance();
+            transformerFactory = TransformerFactory.newInstance("net.sf.saxon.TransformerFactoryImpl", null);
         } catch (Exception e) {
             throw new RuntimeException("Unable to create Fop generator", e);
         }

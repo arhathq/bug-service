@@ -28,7 +28,7 @@ trait BugzillaConfig extends Config {
 
 trait AkkaConfig extends Config {
 
-  val akkaConfig = config.getConfig("akka")
+  val akkaConfig = config
 
 }
 
