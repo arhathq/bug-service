@@ -1,39 +1,33 @@
 package bugapp.http
 
-import akka.actor.{ActorSystem, Props}
+import java.time.LocalDate
+
+import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
 import akka.util.Timeout
+import bugapp.Implicits._
 import bugapp.report.ReportProtocol.GenerateReport
-import bugapp.report.ReportActor
 import bugapp.repository.BugRepository
+import io.circe.generic.auto._
+import io.circe.syntax._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext
+import scala.language.postfixOps
 
-class AppRoute(private val bugRepository: BugRepository)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext) extends ResponseSupport {
-
-  import io.circe.generic.auto._
+class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext) extends ResponseSupport {
 
   lazy val log: LoggingAdapter = Logging(system, getClass)
-
-  val reportActor = system.actorOf(Props(new ReportActor(bugRepository)), "reportActor")
 
   implicit val timeout = Timeout(5 seconds)
 
   val routes =
-    path("bugs") {
+    path("bugs" / IntNumber) { week =>
       get {
         extractRequest { req =>
-          sendResponse(bugRepository.getBugs())
-        }
-      }
-    } ~
-    path("openbugs") {
-      get {
-        extractRequest { req =>
-          sendResponse(bugRepository.getOpenBugs())
+          sendResponse(bugRepository.getBugs(LocalDate.now.minusWeeks(week)))
         }
       }
     } ~

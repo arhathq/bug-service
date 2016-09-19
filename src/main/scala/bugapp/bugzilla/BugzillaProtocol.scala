@@ -1,5 +1,7 @@
 package bugapp.bugzilla
 
+import java.time.{LocalDate, OffsetDateTime}
+
 import io.circe.Encoder
 import io.circe.generic.semiauto._
 
@@ -8,12 +10,12 @@ case class BugzillaBug(id: Int,
                        creator: String,
                        assigned_to: Option[String],
                        severity: String,
-                       last_change_time: Option[String],
+                       last_change_time: Option[OffsetDateTime],
                        cf_project_team: Option[String],
                        is_cc_accessible: Boolean,
                        url: String,
                        groups: Seq[String],
-                       creation_time: String,
+                       creation_time: OffsetDateTime,
                        whiteboard: Option[String],
                        qa_contact: Option[String],
                        cf_v1_reference: Option[String],
@@ -44,17 +46,13 @@ case class BugzillaBug(id: Int,
 
 case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
-                          creation_time: Option[String],
-//                          status: Option[List[String]] = None,
-//                          priority: Option[List[String]] = None,
-//                          cf_target_milestone: Option[List[String]] = Some(List()),
+                          creation_time: LocalDate,
                           cf_production: Option[String] = Some("Production"))
 object BugzillaParams {
-  implicit val encodeFoo: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
+  import bugapp.Implicits._
 
-  def apply(username: String, password: String, startDate: Option[String]) = new BugzillaParams(username, password, startDate)
-//  def apply(username: String, password: String, startDate: Option[String], statuses: Option[List[String]]) = new BugzillaParams(username, password, startDate, statuses)
-//  def apply(username: String, password: String, statuses: Option[List[String]], priorities: Option[List[String]]) = new BugzillaParams(username, password,  statuses, priorities)
+  implicit val encodeFoo: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
+  def apply(username: String, password: String, startDate: LocalDate) = new BugzillaParams(username, password, startDate)
 }
 
 case class BugzillaRequest(method: String, params: BugzillaParams)

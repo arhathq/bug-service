@@ -1,72 +1,63 @@
 package bugapp.bugzilla
 
-import akka.actor.ActorSystem
+import java.io.File
+import java.time.LocalDate
+import java.time.temporal.IsoFields
+
+import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
-import akka.http.scaladsl.model.{HttpMethods, Uri}
+import akka.pattern.ask
 import akka.stream.ActorMaterializer
+import akka.util.Timeout
 import bugapp._
-import bugapp.http.HttpClient
+import bugapp.Implicits._
+import bugapp.bugzilla.BugzillaActor.GetData
 import bugapp.repository.{Bug, BugRepository}
+import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
+import io.circe.generic.auto._
+import io.circe.syntax._
+import io.circe.streaming._
+import io.iteratee.scalaz.task._
 
-import scala.concurrent.{ExecutionContext, Future}
+import scala.concurrent.{ExecutionContext, Future, Promise}
+import scala.concurrent.duration._
+import scalaz.{-\/, \/-}
+import scalaz.concurrent.Task
 
-class BugzillaRepository(httpClient: HttpClient)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with BugzillaConfig {
+class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) extends BugRepository with BugzillaConfig {
 
   protected val log: LoggingAdapter = Logging(s, getClass)
 
-  /**
-   * method "Bug.search"
-   * params   [{"Bugzilla_login":"user","Bugzilla_password":"password","status":["RESOLVED"],"cf_target_milestone":["2016"],"cf_production":["Production"]}]
-   * {"error":{"message":"When using JSON-RPC over GET, you must specify a 'method' parameter. See the documentation at docs/en/html/api/Bugzilla/WebService/Server/JSONRPC.html","code":32000},"id":"http://192.168.0.2","result":null}
-   */
-  override def getBugs(statuses: List[String], milestones: List[String], environments: List[String]): Future[Seq[Bug]] = {
-    val params = BugzillaParams(
-      bugzillaUsername,
-      bugzillaPassword,
-      Some("2016-04-01")
-    )
-    getBugs(BugzillaRequest("Bug.search", params)).map { s =>
-      Seq[Bug]()
+  QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData())
+
+  def getBugs(fromDate: LocalDate): Future[Seq[Bug]] = {
+
+    loadDataIfNeeded().flatMap { path =>
+      val p: Promise[Seq[Bug]] = Promise()
+      readBytes(new File(path)).
+        through(byteParser).
+        through(decoder[Task, BugzillaBug]).
+        through(filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) >= fromDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))).
+        map(BugzillaRepository.asBug).
+        toVector.unsafePerformAsync {
+        case -\/(ex) => p.failure(ex)
+        case \/-(bugs) => p.success(bugs)
+      }
+      p.future
     }
+
   }
 
-  override def getOpenBugs(statuses: List[String], priorities: List[String]): Future[Seq[Bug]] = {
-    val params = BugzillaParams(
-      bugzillaUsername,
-      bugzillaPassword,
-      Some("2016-04-01")
-    )
-    getBugs(BugzillaRequest("Bug.search", params)).map { s =>
-      Seq[Bug]()
-    }
-  }
+  def loadDataIfNeeded(): Future[String] = {
+    val path = UtilsIO.bugzillaDataPath(repositoryPath, LocalDate.now)
 
-  private def toJsonString(params: BugzillaParams): String = {
-    import io.circe.generic.auto._
-    import io.circe.syntax._
+    val dataPath = s"$path/$repositoryFile"
 
-    List(params).asJson.noSpaces
-  }
-
-  private def uri(request: BugzillaRequest): Uri = {
-    Uri(bugzillaUrl).
-      withPath(Uri.Path("/jsonrpc.cgi")).
-      withQuery(Uri.Query(
-        Map(
-          "method" -> request.method,
-          "params" -> toJsonString(request.params)
-        )
-      ))
-  }
-
-  private def getBugs(request: BugzillaRequest): Future[String] = {
-//    import io.circe.generic.auto._
-//    import io.circe.syntax._
-
-
-    httpClient.execute[String](uri(request), HttpMethods.GET).map { response =>
-      log.debug(response.toString)
-      response
+    if (UtilsIO.ifFileExists(dataPath)) Future.successful(dataPath)
+    else {
+      implicit val timeout = Timeout(fetchTimeout seconds)
+      val f = ask(bugzillaActor, GetData()).mapTo[String]
+      f
     }
   }
 
@@ -77,5 +68,27 @@ class BugzillaRepository(httpClient: HttpClient)(implicit val s: ActorSystem, im
   val excludedProducts = List("CRF Hot Deploy - Prod DB", "Ecomm Deploy - Prod DB")
   val excludedComponents = List("Dataload Failed", "New Files Arrived", "Data Consistency")
 
+}
+
+object BugzillaRepository {
+
+  def asBug(bugzillaBug: BugzillaBug): Bug = {
+    Bug(
+      bugzillaBug.id,
+      bugzillaBug.severity,
+      bugzillaBug.priority,
+      bugzillaBug.status,
+      bugzillaBug.resolution.getOrElse(""),
+      bugzillaBug.creator,
+      bugzillaBug.creation_time,
+      bugzillaBug.assigned_to.getOrElse(""),
+      bugzillaBug.last_change_time.getOrElse(bugzillaBug.creation_time),
+      bugzillaBug.product.getOrElse(""),
+      bugzillaBug.component.getOrElse(""),
+      "",
+      bugzillaBug.summary,
+      ""
+    )
+  }
 }
 

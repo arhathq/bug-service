@@ -1,9 +1,11 @@
 package bugapp.report
 
+import java.time.LocalDate
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.ReportConfig
+import bugapp.bugzilla.BugzillaRepository
 import bugapp.report.ReportProtocol.{Bugs, GenerateReport, ReportError, ReportGenerated}
 import bugapp.repository.BugRepository
 
@@ -33,9 +35,9 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
         jobs += (jobId -> workers)
         senders += (jobId -> sender)
         log.info(s"Job [$jobId], Workers $jobs")
-        val bugs = bugRepository.getBugs()
+        val bugs = bugRepository.getBugs(LocalDate.now)
 
-        workers.foreach(x => x._2 ! Bugs(jobId, bugs))
+//        workers.foreach(x => x._2 ! Bugs(jobId, bugs))
       }
     }
     case ReportGenerated(jobId) => {
@@ -52,4 +54,8 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
   }
 
   def reportId:String = UUID.randomUUID().toString
+}
+
+object ReportActor {
+  def props(bugRepository: BugzillaRepository) = Props(classOf[ReportActor], bugRepository)
 }

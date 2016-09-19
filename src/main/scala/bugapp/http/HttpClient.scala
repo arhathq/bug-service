@@ -19,9 +19,9 @@ import scala.util.{Failure, Success, Try}
 class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) {
   val uri = Uri(url)
 
-  lazy val hostName = uri.authority.host.address()
-  lazy val port = uri.authority.port
-  lazy val scheme = uri.scheme
+  val hostName = uri.authority.host.address()
+  val port = uri.authority.port
+  val scheme = uri.scheme
 
   lazy val sslContext = new DummySSLFactory().getSSLContext
 

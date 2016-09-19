@@ -22,7 +22,7 @@
             <!-- rollover daily -->
             <fileNamePattern>bug-service-%d{yyyy-MM-dd}.%i..log</fileNamePattern>
             <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
-                <!-- or whenever the file size reaches 5MB -->
+                <!-- or whenever the file size reaches 10MB -->
                 <maxFileSize>10MB</maxFileSize>
             </timeBasedFileNamingAndTriggeringPolicy>
         </rollingPolicy>
@@ -36,7 +36,9 @@
         <appender-ref ref="FILE"/>
     </appender>
 
-    <logger name="akka.actor.ActorSystemImpl" level="DEBUG"/>
+    <logger name="com.typesafe.sslconfig" level="INFO"/>
+    <logger name="akka" level="INFO"/>
+    <logger name="org.quartz" level="INFO"/>
 
     <root level="DEBUG">
         <appender-ref ref="CONSOLE"/>

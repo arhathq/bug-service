@@ -1,15 +1,27 @@
 package bugapp
 
+import java.io.File
+import java.time.OffsetDateTime
+import java.time.temporal.IsoFields
+
 import org.scalatest.FunSuite
-import bugapp.bugzilla.{BugzillaParams, BugzillaRequest}
-import io.circe.Printer
+import bugapp.bugzilla.{BugzillaBug, BugzillaParams, BugzillaRequest}
+import io.circe.parser._
+import io.circe.streaming._
+import io.circe.{Decoder, Encoder, HCursor, Printer, Json => JsonC}
+import io.iteratee.Enumerator
+import io.iteratee.scalaz.task._
+
+import scala.collection.mutable
+import scalaz.{-\/, \/, \/-}
+import scalaz.concurrent.Task
 
 /**
   * @author Alexander Kuleshov
   */
 class CirceJsonTests extends FunSuite {
-  import io.circe.{ Decoder, Encoder, Json => JsonC }
   import io.circe.generic.auto._, io.circe.syntax._
+  import Implicits._
 
   //  val jsonVal = """{"service": "hello", "active": true}"""
   //  println(parse(jsonVal).getOrElse(Json.Null))
@@ -30,6 +42,15 @@ class CirceJsonTests extends FunSuite {
     def jsonPrinter(): Printer = Printer(preserveOrder = true, dropNullKeys = true, indent = "")
   }
 
+  case class Bar(i: String)
+  object Bar {
+    implicit val decodeB: Decoder[Bar] = Decoder.instance(c =>
+      for {
+        id <- c.downField("q").as[String]
+      } yield Bar(id)
+    )
+  }
+
   test("Params test") {
     val p = Params("user1", "pwd")
     println(p.asJson.pretty(Params.jsonPrinter()))
@@ -39,15 +60,6 @@ class CirceJsonTests extends FunSuite {
     case class Foo(ab: Option[Int])
     val p1 = Foo(Some(1))
     println(p1.asJson.spaces2)
-  }
-
-  test("BugzillaParams") {
-    val openBugs = BugzillaParams(
-      "username1",
-      "sadsf444",
-      Some(List("UNCOFIRMED", "NEW", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "PROBLEM_DETERMINED", "REOPENED")),
-      Some(List("P1", "P2")))
-    println(BugzillaParams.toJsonString(openBugs))
   }
 
   test("Implicit encoder") {
@@ -73,7 +85,7 @@ class CirceJsonTests extends FunSuite {
           "qux": ["a", "b"],
           "result" : {
             "bugs" : [
-              {"q" : "1"}, {"f" : "2"}, {"z" : "3"}
+              {"q" : "1"}, {"q" : "2"}, {"z" : "3"}
             ]
           }
         }
@@ -98,14 +110,41 @@ class CirceJsonTests extends FunSuite {
     val arrayQux: Decoder.Result[Array[String]] =
       cursor.downField("values").downField("qux").as[Array[String]]
     println(arrayQux.getOrElse(Array()).length)
-/*
-    val arrayBugs: Decoder.Result[Array[B]] =
-      cursor.downField("values").downField("result").downField("bugs").as[Array[B]]
-    println(arrayBugs.getOrElse(Array[B]()).length)
 
-    println(cursor.downField("values").downField("result").downField("bugs").downArray.as[Array[(String, Int)]])
+    val arrayBugs: Decoder.Result[Array[Bar]] =
+      cursor.downField("values").downField("result").downField("bugs").as[Array[Bar]]
+    println(arrayBugs.getOrElse(Array[Bar]()).length)
 
-    case class B(i: Int)
-*/
+    println(cursor.downField("values").downField("result").downField("bugs").as[Array[Bar]])
+
   }
+
+  test("Json Streaming") {
+//    val list = (1 to 100000000).toStream
+
+    val source: Enumerator[Task, BugzillaBug] =
+      readBytes(new File("bugzilla-raw-data.txt")).through(byteParser).through(decoder[Task, BugzillaBug])
+
+    implicit val date = OffsetDateTime.now
+
+//    val task = bugs.into(length)
+
+//    println(task)
+//    println(task.unsafePerformSync)
+
+    val step = 100
+    val task =
+      source.through(filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))).toVector
+//    filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
+    println(task.unsafePerformSync)
+
+
+  }
+
+  def normalize(json: JsonC): JsonC = {
+//    val res = json
+    val res = json.hcursor.downField("result").downField("bugs").downArray.delete.focus.getOrElse(JsonC.Null)
+    res
+  }
+
 }

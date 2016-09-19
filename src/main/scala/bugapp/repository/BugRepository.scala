@@ -1,28 +1,29 @@
 package bugapp.repository
 
+import java.time.{LocalDate, OffsetDateTime}
 
 import scala.concurrent.Future
 
 trait BugRepository {
-  def getBugs(statuses: List[String] = List(), milestones: List[String] = List(), environments: List[String] = List()): Future[Seq[Bug]]
-
-  def getOpenBugs(statuses: List[String] = List(), priorities: List[String] = List()): Future[Seq[Bug]]
+  def getBugs(fromDate: LocalDate): Future[Seq[Bug]]
 }
 
-case class Bug(id: String,
+case class Bug(id: Int,
                severity: String,
                priority: String,
                status: String,
                resolution: String,
                reporter: String,
-               opened: String,
+               opened: OffsetDateTime,
                assignee: String,
-               changed: String,
+               changed: OffsetDateTime,
                product: String,
                component: String,
                environment: String,
                summary: String,
-               hardware: String
-              )
+               hardware: String)
+object Bug {
+
+}
 
 case class BugsError(message: String) extends Exception(message)
