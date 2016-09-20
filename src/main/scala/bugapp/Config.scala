@@ -25,9 +25,12 @@ trait BugzillaConfig extends Config {
   val bugzillaPassword = bugzillaConfig.getString("password")
 
   val fetchPeriod = bugzillaConfig.getInt("fetch-period-in-weeks")
-  val repositoryPath = "d:/tmp/bugs"
-  val repositoryFile = "bugs_all.json"
-  val fetchTimeout = 10
+  val rootPath = bugzillaConfig.getString("repository-path")
+  val repositoryFile = bugzillaConfig.getString("repository-file")
+  val fetchTimeout = bugzillaConfig.getInt("fetch-timeout")
+
+  val excludedProducts = bugzillaConfig.getStringList("excludedProducts")
+  val excludedComponents = bugzillaConfig.getStringList("excludedComponents")
 }
 
 trait AkkaConfig extends Config {

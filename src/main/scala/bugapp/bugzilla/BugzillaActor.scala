@@ -44,12 +44,13 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
 
       log.debug(s"Scheduled for data with params [date=$date; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
-      val dataPath = UtilsIO.bugzillaDataPath(repositoryPath, date)
-
-      UtilsIO.createDirectoryIfNotExists(dataPath)
-
       loadData(date.minusWeeks(fetchPeriod)).map { response =>
+
+        val dataPath = UtilsIO.bugzillaDataPath(rootPath, date)
+
         val output = s"$dataPath/$repositoryFile"
+
+        UtilsIO.createDirectoryIfNotExists(dataPath)
 
         val responseParts = response.split(regex)
         if (responseParts.isEmpty)
