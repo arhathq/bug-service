@@ -42,6 +42,9 @@ trait AkkaConfig extends Config {
 trait ReportConfig extends Config {
 
   val maxJobs = 10
+  val fopConf = "fop1.xconf"
+  val reportDir = "/opt/data"
+  val templateDir = "/opt/template/bug-report.xsl"
 
 
 }

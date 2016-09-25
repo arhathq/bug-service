@@ -32,7 +32,7 @@ public class FopReportGenerator {
         }
     }
 
-    private byte[] generate(InputStream data, InputStream template) throws Exception {
+    public byte[] generate(InputStream data, InputStream template) throws Exception {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             Fop fop = fopFactory.newFop(outputFormat, os);
             Transformer transformer = transformerFactory.newTransformer(new StreamSource(template));

@@ -5,57 +5,45 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.ReportConfig
-import bugapp.bugzilla.BugzillaRepository
-import bugapp.report.ReportProtocol.{Bugs, GenerateReport, ReportError, ReportGenerated}
 import bugapp.repository.BugRepository
+
+import scala.collection.mutable
 
 /**
   * @author Alexander Kuleshov
   */
 class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging with ReportConfig {
 
-  var jobs: Map[String, Map[String, ActorRef]] = Map()
-  var senders: Map[String, ActorRef] = Map()
+  import bugapp.report.ReportProtocol._
 
-  @scala.throws[Exception](classOf[Exception])
-  override def preStart(): Unit = {
+  private val senders = mutable.Map.empty[String, ActorRef]
 
-    log.info(s"Actor created")
-    super.preStart()
-  }
+  val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
+  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, templateDir, self))
 
   override def receive: Receive = {
-    case GenerateReport(weeks) => {
+    case GenerateReport(weeks) =>
       log.info(s"Weeks period: $weeks")
-      if (jobs.size >= maxJobs)
-        sender ! ReportError(s"Max reports is limited: $maxJobs")
+      if (senders.size >= maxJobs)
+        sender ! ReportFailed(s"Max reports is limited: $maxJobs")
       else {
-        val jobId = reportId
-        val workers = reports()
-        jobs += (jobId -> workers)
-        senders += (jobId -> sender)
-        log.info(s"Job [$jobId], Workers $jobs")
-        val bugs = bugRepository.getBugs(LocalDate.now)
-
-//        workers.foreach(x => x._2 ! Bugs(jobId, bugs))
+        val reportId = newReportId
+        senders += reportId -> sender
+        reportDataBuilder ! PrepareReportData(reportId, bugRepository.getBugs(LocalDate.now.minusWeeks(weeks)))
       }
-    }
-    case ReportGenerated(jobId) => {
-      jobs -= jobId
-      log.info(s"Job [$jobId] completed, Workers $jobs")
-      val client = senders get jobId
-      senders -= jobId
-      client.get ! s"{status: 'OK', jobdId: '$jobId', reportId: '$reportId'}"
-    }
+
+    case ReportDataPrepared(reportId, data) =>
+      reportBuilder ! PrepareReport(reportId, data)
+
+    case ReportPrepared(reportId, report) =>
+      senders.remove(reportId) match {
+        case Some(sender) => sender ! ReportGenerated(report)
+      }
   }
 
-  def reports(): Map[String, ActorRef] = {
-    Map("allOpenBugsReportActor" -> context.actorOf(Props[AllOpenBugsReportActor]))
-  }
-
-  def reportId:String = UUID.randomUUID().toString
+  def newReportId: String = UUID.randomUUID().toString
 }
 
 object ReportActor {
-  def props(bugRepository: BugzillaRepository) = Props(classOf[ReportActor], bugRepository)
+  def props(bugRepository: BugRepository) = Props(classOf[ReportActor], bugRepository)
 }
