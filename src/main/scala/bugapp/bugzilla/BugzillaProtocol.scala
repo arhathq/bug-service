@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.time.{LocalDate, OffsetDateTime}
 
-import io.circe.Encoder
+import io.circe.{Encoder, Printer}
 import io.circe.generic.semiauto._
 
 case class BugzillaBug(id: Int,
@@ -44,15 +44,25 @@ case class BugzillaBug(id: Int,
                        target_milestone: Option[String]
                       )
 
+case class BugzillaHistory(id: Int)
+
 case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
-                          creation_time: LocalDate,
-                          cf_production: Option[String] = Some("Production"))
+                          creation_time: Option[LocalDate] = None,
+                          ids: Option[Seq[Int]] = None,
+                          cf_production: Option[String] = Some("Production")) {
+  import io.circe.syntax._
+
+  def toJsonString: String = List(this).asJson.pretty(BugzillaParams.jsonPrinter)
+}
 object BugzillaParams {
   import bugapp.Implicits._
 
   implicit val encodeFoo: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
-  def apply(username: String, password: String, startDate: LocalDate) = new BugzillaParams(username, password, startDate)
+  def apply(username: String, password: String, startDate: LocalDate) = new BugzillaParams(username, password, creation_time = Some(startDate))
+  def apply(username: String, password: String, ids: Seq[Int]) = new BugzillaParams(username, password, ids = Some(ids))
+
+  private[bugzilla] val jsonPrinter: Printer = Printer(preserveOrder = true, dropNullKeys = true, indent = "")
 }
 
 case class BugzillaRequest(method: String, params: BugzillaParams)

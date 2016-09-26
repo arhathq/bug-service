@@ -6,6 +6,8 @@ import scala.concurrent.Future
 
 trait BugRepository {
   def getBugs(fromDate: LocalDate): Future[Seq[Bug]]
+
+  def getBugHistory(bugId: List[Int]): Seq[BugHistory]
 }
 
 case class Bug(id: Int,
@@ -22,8 +24,7 @@ case class Bug(id: Int,
                environment: String,
                summary: String,
                hardware: String)
-object Bug {
 
-}
+case class BugHistory(id: Int)
 
 case class BugsError(message: String) extends Exception(message)

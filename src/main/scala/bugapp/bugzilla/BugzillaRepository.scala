@@ -13,7 +13,7 @@ import akka.util.Timeout
 import bugapp._
 import bugapp.Implicits._
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
-import bugapp.repository.{Bug, BugRepository}
+import bugapp.repository.{Bug, BugHistory, BugRepository}
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -43,19 +43,23 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
     })
   }
 
+  def getBugHistory(bugId: List[Int]): Seq[BugHistory] = {
+    bugId.map(BugHistory)
+  }
+
   def getBugs(f: (BugzillaBug) => Boolean): Future[Seq[Bug]] = {
     loadDataIfNeeded().flatMap { path =>
-      val p: Promise[Seq[Bug]] = Promise()
+      val promise = Promise[Seq[Bug]]()
       readBytes(new File(path)).
         through(byteParser).
         through(decoder[Task, BugzillaBug]).
         through(filter(f)).
         map(BugzillaRepository.asBug).
         toVector.unsafePerformAsync {
-          case -\/(ex) => p.failure(ex)
-          case \/-(bugs) => p.success(bugs)
+          case -\/(ex) => promise.failure(ex)
+          case \/-(bugs) => promise.success(bugs)
       }
-      p.future
+      promise.future
     }
   }
 

@@ -9,8 +9,6 @@ import akka.http.scaladsl.model.{HttpMethods, Uri}
 import bugapp.{BugzillaConfig, UtilsIO}
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
 import bugapp.http.HttpClient
-import io.circe.generic.auto._
-import io.circe.syntax._
 import io.circe.streaming._
 import io.iteratee.scalaz.task._
 
@@ -52,11 +50,9 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
 
         UtilsIO.createDirectoryIfNotExists(dataPath)
 
-        val responseParts = response.split(regex)
-        if (responseParts.isEmpty)
-          UtilsIO.write(output, response)
-        else
-          UtilsIO.write(output, responseParts(1).substring(0, responseParts(1).length - 2))
+        val normalized = normalize(response)
+        log.debug("Normalized ending: " + normalized.substring(normalized.length - 10, normalized.length))
+        UtilsIO.write(output, normalized)
 
         log.debug(s"File $output created")
 
@@ -70,6 +66,14 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       }
   }
 
+  def normalize(response: String): String = {
+    val responseParts = response.split(regex)
+    if (responseParts.length < 2)
+      response
+    else
+      responseParts(1).substring(0, responseParts(1).length - 2)
+  }
+
   /**
     * method "Bug.search"
     * params   [{"Bugzilla_login":"user","Bugzilla_password":"password","status":["RESOLVED"],"cf_target_milestone":["2016"],"cf_production":["Production"]}]
@@ -81,8 +85,19 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
     httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)
   }
 
+  /**
+    * method "Bug.history"
+    */
+  def loadHistory(ids: Seq[Int]): Future[String] = {
+    val params = BugzillaParams(bugzillaUsername, bugzillaPassword, ids = Some(ids))
+    val request = BugzillaRequest("Bug.history", params)
+    httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)
+  }
+
   def findAndStoreRecentBugs(input: String, output: String, week: Int) = {
     import bugapp.Implicits._
+    import io.circe.generic.auto._
+    import io.circe.syntax._
 
     readBytes(new File(input)).
       through(byteParser).
@@ -90,11 +105,22 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       through(filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == week)).
       toVector.unsafePerformAsync {
         case -\/(ex) =>
-          log.error("Error while streaming bugs data", ex)
+          log.error("Error while streaming bugs data {}", ex)
 
         case \/-(bugs) =>
           UtilsIO.write(output, bugs.asJson.noSpaces)
           log.debug(s"File $output created")
+          val ids = bugs.map(_.id)
+          loadAndStoreBugsHistory(ids)
+    }
+  }
+
+  def loadAndStoreBugsHistory(ids: Seq[Int]) = {
+    loadHistory(ids).map { response =>
+      val path = UtilsIO.bugzillaDataPath(rootPath, LocalDate.now)
+      val historyPath = s"$path/bugs_weekly_history.json"
+      UtilsIO.write(historyPath, normalize(response))
+      log.debug(s"File $historyPath created")
     }
   }
 
@@ -106,15 +132,13 @@ object BugzillaActor {
 
   def props(httpClient: HttpClient) = Props(classOf[BugzillaActor], httpClient)
 
-  private def toJsonString(params: BugzillaParams): String = List(params).asJson.noSpaces
-
   private def uri(bugzillaUrl: String, request: BugzillaRequest): Uri = {
     Uri(bugzillaUrl).
       withPath(Uri.Path("/jsonrpc.cgi")).
       withQuery(Uri.Query(
         Map(
           "method" -> request.method,
-          "params" -> toJsonString(request.params)
+          "params" -> request.params.toJsonString
         )
       ))
   }

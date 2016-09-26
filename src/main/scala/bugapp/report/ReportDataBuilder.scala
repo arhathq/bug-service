@@ -2,7 +2,9 @@ package bugapp.report
 
 import java.time.OffsetDateTime
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
+import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.repository.Bug
 
 import scala.collection.mutable
 import scala.xml.Elem
@@ -12,54 +14,59 @@ import scala.xml.Elem
   */
 class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
-  import bugapp.report.ReportProtocol._
-
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
   private val data = mutable.Map.empty[String, List[Elem]]
 
   def createWorkers(reportId: String): Set[ActorRef] = {
-    Set(context.actorOf(Props[AllOpenBugsReportActor]))
+    Set(context.actorOf(AllOpenBugsReportActor.props(self)))
   }
 
   override def receive: Receive = {
-    case PrepareReportData(reportId, bugs) =>
+    case ReportDataRequest(reportId, bugs) =>
       val workers = createWorkers(reportId)
       jobs += reportId -> workers
       log.info(s"Job [$reportId], Workers $jobs")
-      workers.foreach(_ ! PrepareReportData(reportId, bugs))
+      workers.foreach(_ ! ReportDataRequest(reportId, bugs))
 
-    case ReportData(reportId, reportData) =>
+    case ReportDataResponse(reportId, reportData) =>
       data.get(reportId) match {
         case Some(reportDataList) => data += reportId -> (reportData :: reportDataList)
+        case None => data += reportId -> (reportData :: Nil)
       }
       jobs.get(reportId) match {
         case Some(workers) =>
-          workers -= sender
-          if (workers.isEmpty) {
+          sender ! PoisonPill
+          val busyWorkers = workers - sender
+          if (busyWorkers.isEmpty) {
             jobs -= reportId
-            reportActor ! ReportDataPrepared(reportId, buildReportData(reportId))
+            reportActor ! ReportDataResponse(reportId, buildReportData(reportId))
           } else
-            jobs += reportId -> workers
+            jobs += reportId -> busyWorkers
+        case None =>
       }
   }
 
   def buildReportData(reportId: String): Elem = {
-    val xml3 = new xml.NodeBuffer()
+    val reportData = new xml.NodeBuffer()
     data.get(reportId) match {
       case Some(dataList) =>
-        dataList.foreach(xml3.append)
+        dataList.foreach(reportData.append)
         data -= reportId
+      case None =>
     }
 
-    val dataXml =
-      <bug-reports>
-        <date>${OffsetDateTime.now}</date>
-        {xml3}
-      </bug-reports>
-    dataXml
+    <bug-reports>
+      <report-header>
+        <date>{OffsetDateTime.now}</date>
+      </report-header>
+      {reportData}
+    </bug-reports>
   }
 }
 
 object ReportDataBuilder {
+  case class ReportDataRequest(reportId: String, bugs: Seq[Bug])
+  case class ReportDataResponse(reportId: String, result: Elem)
+
   def props(reportActor: ActorRef) = Props(classOf[ReportDataBuilder], reportActor)
 }

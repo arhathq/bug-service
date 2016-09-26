@@ -1,5 +1,7 @@
 package bugapp
 
+import akka.actor.Props
+import bugapp.report.AllOpenBugsReportActor
 import com.typesafe.config.ConfigFactory
 
 trait Config {
@@ -41,10 +43,11 @@ trait AkkaConfig extends Config {
 
 trait ReportConfig extends Config {
 
-  val maxJobs = 10
-  val fopConf = "fop1.xconf"
-  val reportDir = "/opt/data"
-  val templateDir = "/opt/template/bug-report.xsl"
+  private val reportConfig = config.getConfig("reports")
 
+  val maxJobs = reportConfig.getInt("maxJobs")
+  val fopConf = reportConfig.getString("fopConf")
+  val reportDir = reportConfig.getString("reportDir")
+  val templateDir = reportConfig.getString("templateDir")
 
 }

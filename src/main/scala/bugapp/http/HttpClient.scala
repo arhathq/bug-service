@@ -1,6 +1,7 @@
 package bugapp.http
 
 import akka.actor.ActorSystem
+import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.settings.ConnectionPoolSettings
@@ -17,6 +18,9 @@ import scala.util.{Failure, Success, Try}
   * @author Alexander Kuleshov
   */
 class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, implicit val m: ActorMaterializer, implicit val ec: ExecutionContext) {
+
+  private val logger: LoggingAdapter = Logging(s, getClass)
+
   val uri = Uri(url)
 
   val hostName = uri.authority.host.address()
@@ -37,6 +41,8 @@ class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, impli
 
   def execute[Response](uri: Uri, method: HttpMethod)(implicit um: FromEntityUnmarshaller[Response]): Future[Response] = {
 
+    log("Http Request:", uri.queryString())
+
     val outbound = Flow[(Any, Any)].map {
       case (req, context) =>
         val httpRequest = HttpRequest(method, uri)
@@ -45,7 +51,7 @@ class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, impli
 
     val executionFlow = BidiFlow.fromFlows(outbound, inbound[Response, Any]).join(connectionFlow[Any])
 
-    run[Response](executionFlow)(None)
+    run[Response](executionFlow)
   }
 
   private def inbound[Response, Context](implicit um: FromEntityUnmarshaller[Response]): Flow[(Try[HttpResponse], Context), (Try[Response], Context), Any] = {
@@ -59,12 +65,16 @@ class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, impli
     }.flatMapConcat(Source.fromFuture)
   }
 
-  private def run[Response](flow: Flow[(Any, Any), (Try[Response], Any), Any])(request: Any): Future[Response] = {
-    Source.single((request, None))
+  private def run[Response](flow: Flow[(Any, Any), (Try[Response], Any), Any]): Future[Response] = {
+    Source.single((None, None))
       .via(flow)
       .runWith(Sink.head)(m)
-      .map(_._1)(ec)
+      .map(res => {log("Http Response:", res._1.getOrElse("")); res._1})(ec)
       .flatMap(Future.fromTry)(ec)
   }
 
+  private def log(message: String, value: Any): Unit = {
+    val valueStr = value.toString
+    logger.debug(s"$message ${valueStr.substring(0, valueStr.length.min(255))}")
+  }
 }

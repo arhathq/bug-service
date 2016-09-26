@@ -8,7 +8,7 @@ import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
 import akka.util.Timeout
 import bugapp.Implicits._
-import bugapp.report.ReportProtocol.GenerateReport
+import bugapp.report.ReportActor._
 import bugapp.repository.BugRepository
 import io.circe.generic.auto._
 import io.circe.syntax._
@@ -34,7 +34,7 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
     path("report" / IntNumber ) { weeks =>
       get {
         extractRequest { req =>
-          sendResponse(ask(reportActor, GenerateReport(weeks)).mapTo[String])
+          sendResponse(ask(reportActor, GetReport(weeks)).mapTo[ReportResult])
         }
       }
     }
