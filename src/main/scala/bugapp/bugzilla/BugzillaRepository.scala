@@ -15,8 +15,6 @@ import bugapp.Implicits._
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
 import bugapp.repository.{Bug, BugHistory, BugRepository}
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
-import io.circe.generic.auto._
-import io.circe.syntax._
 import io.circe.streaming._
 import io.iteratee.scalaz.task._
 
@@ -35,8 +33,8 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
     getBugs((b: BugzillaBug) => {
       val weekOfYear = IsoFields.WEEK_OF_WEEK_BASED_YEAR
       if (b.creation_time.get(weekOfYear) >= fromDate.get(weekOfYear) &&
-        !excludedProducts.contains(b.product.get) &&
-        !excludedComponents.contains(b.component.get))
+        !excludedProducts.contains(b.product) &&
+        !excludedComponents.contains(b.component))
         true
       else
         false
@@ -44,7 +42,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   }
 
   def getBugHistory(bugId: List[Int]): Seq[BugHistory] = {
-    bugId.map(BugHistory)
+    bugId.map(BugHistory(_, None, Seq()))
   }
 
   def getBugs(f: (BugzillaBug) => Boolean): Future[Seq[Bug]] = {
@@ -96,11 +94,12 @@ object BugzillaRepository {
       bugzillaBug.creation_time,
       bugzillaBug.assigned_to.getOrElse(""),
       bugzillaBug.last_change_time.getOrElse(bugzillaBug.creation_time),
-      bugzillaBug.product.getOrElse(""),
-      bugzillaBug.component.getOrElse(""),
+      bugzillaBug.product,
+      bugzillaBug.component,
       "",
       bugzillaBug.summary,
-      ""
+      "",
+      None
     )
   }
 }

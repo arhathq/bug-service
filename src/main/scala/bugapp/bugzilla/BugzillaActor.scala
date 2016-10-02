@@ -9,6 +9,9 @@ import akka.http.scaladsl.model.{HttpMethods, Uri}
 import bugapp.{BugzillaConfig, UtilsIO}
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
 import bugapp.http.HttpClient
+import bugapp.Implicits._
+import io.circe.generic.auto._
+import io.circe.syntax._
 import io.circe.streaming._
 import io.iteratee.scalaz.task._
 
@@ -95,9 +98,6 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
   }
 
   def findAndStoreRecentBugs(input: String, output: String, week: Int) = {
-    import bugapp.Implicits._
-    import io.circe.generic.auto._
-    import io.circe.syntax._
 
     readBytes(new File(input)).
       through(byteParser).
@@ -105,7 +105,7 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       through(filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == week)).
       toVector.unsafePerformAsync {
         case -\/(ex) =>
-          log.error("Error while streaming bugs data {}", ex)
+          log.error("Error while streaming bugs data", ex)
 
         case \/-(bugs) =>
           UtilsIO.write(output, bugs.asJson.noSpaces)

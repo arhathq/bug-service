@@ -24,6 +24,9 @@ libraryDependencies ++= {
 
     "de.heikoseeberger"      %% "akka-http-circe"                   % "1.6.0",
 
+    "de.knutwalker"          %% "akka-stream-circe"                 % "3.1.0",
+    "de.knutwalker"          %% "akka-http-circe"                   % "3.1.0",
+
     "io.circe"               %% "circe-core"                        % circeVersion,
     "io.circe"               %% "circe-generic"                     % circeVersion,
     "io.circe"               %% "circe-parser"                      % circeVersion,

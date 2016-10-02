@@ -23,8 +23,11 @@ case class Bug(id: Int,
                component: String,
                environment: String,
                summary: String,
-               hardware: String)
-
-case class BugHistory(id: Int)
+               hardware: String,
+               history: Option[BugHistory]
+              )
+case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])
+case class HistoryItem(when: OffsetDateTime, who: String, changes: Seq[HistoryItemChange])
+case class HistoryItemChange(removed: String, added: String, field: String)
 
 case class BugsError(message: String) extends Exception(message)
