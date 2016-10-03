@@ -24,6 +24,13 @@ case class Bug(id: Int,
                environment: String,
                summary: String,
                hardware: String,
+               open: Option[String],
+               env: Option[String],
+               week: Option[Int],
+               weekStr: Option[String],
+               source: Option[String],
+               daysOpen: Option[Double],
+               age: Option[String],
                history: Option[BugHistory]
               )
 case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])

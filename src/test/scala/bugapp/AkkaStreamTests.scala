@@ -81,7 +81,8 @@ class AkkaStreamTests extends FunSuite {
       Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution.getOrElse(""),
         bug.creator, bug.creation_time, bug.assigned_to.getOrElse(""),
         bug.last_change_time.getOrElse(bug.creation_time),
-        bug.product, bug.component, "", bug.summary, "", Some(createHistory(history)))
+        bug.product, bug.component, "", bug.summary, "",
+        None, None, None, None, None, Some(0.0), Some(""), Some(createHistory(history)))
     }
 
     val batchUpdate: (Seq[BugzillaBug]) => List[Bug] = bugs => {

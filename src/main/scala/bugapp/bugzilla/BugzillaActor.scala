@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.nio.file.Paths
 import java.time.LocalDate
-import java.time.temporal.IsoFields
+import java.time.temporal.ChronoField
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.{HttpMethods, Uri}
@@ -43,19 +43,17 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       if (!senders.contains(sender())) senders.add(sender)
 
       val date = LocalDate.now
-      val currentWeek = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+      val currentWeek = date.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
       log.debug(s"Scheduled for data with params [date=$date; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
       loadData(date.minusWeeks(fetchPeriod)).map { response =>
         val dataPath = UtilsIO.bugzillaDataPath(rootPath, date)
-        val rawPath = s"$dataPath/$repositoryFile"
+        val rawPath = s"$dataPath/bugs_origin.json"
         UtilsIO.createDirectoryIfNotExists(dataPath)
         UtilsIO.write(rawPath, response)
         log.debug(s"File $rawPath created")
 
-        val output = s"$dataPath/bugs_origin.json"
-
-
+        val output = s"$dataPath/$repositoryFile"
         val future = transform(rawPath, output, batchSize)
         future.map { res =>
           if (res.wasSuccessful) log.debug(s"File $output created")
@@ -157,9 +155,16 @@ object BugzillaActor {
   }
 
   val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
+    val open = Some("")
+    val env = Some("")
+    val week = Some(bug.creation_time.get(ChronoField.ALIGNED_WEEK_OF_YEAR))
+    val weekStr = Some("")
+    val source = Some("")
+    val daysOpen = Some(0.0)
+    val age = None
     Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution.getOrElse(""),
       bug.creator, bug.creation_time, bug.assigned_to.getOrElse(""),
       bug.last_change_time.getOrElse(bug.creation_time),
-      bug.product, bug.component, "", bug.summary, "", Some(createHistory(history)))
+      bug.product, bug.component, "", bug.summary, "", open, env, week, weekStr, source, daysOpen, age, Some(createHistory(history)))
   }
 }

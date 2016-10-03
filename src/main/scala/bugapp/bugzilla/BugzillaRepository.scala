@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.nio.file.Paths
 import java.time.LocalDate
-import java.time.temporal.IsoFields
+import java.time.temporal.ChronoField
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
@@ -28,8 +28,8 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
   def getBugs(fromDate: LocalDate): Future[Seq[Bug]] = {
     getBugs((b: Bug) => {
-      val weekOfYear = IsoFields.WEEK_OF_WEEK_BASED_YEAR
-      if (b.opened.get(weekOfYear) >= fromDate.get(weekOfYear)) true else false
+      val weekOfYear = ChronoField.ALIGNED_WEEK_OF_YEAR
+      if (b.opened.get(weekOfYear) >= fromDate.get(weekOfYear) && b.opened.getYear >= fromDate.getYear) true else false
     })
   }
 
