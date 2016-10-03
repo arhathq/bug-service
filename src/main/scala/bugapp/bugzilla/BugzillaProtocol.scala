@@ -43,7 +43,7 @@ case class BugzillaBug(id: Int,
                        target_milestone: Option[String]
                       )
 
-case class BugzillaHistory(id: Int, alias: Option[String], historyItems: List[BugzillaHistoryItem])
+case class BugzillaHistory(id: Int, alias: Option[String], history: List[BugzillaHistoryItem])
 case class BugzillaHistoryItem(when: OffsetDateTime, who: String, changes: List[BugzillaHistoryChange])
 case class BugzillaHistoryChange(removed: String, added: String, field_name: String)
 case class BugzillaParams(Bugzilla_login: String,
@@ -61,6 +61,7 @@ object BugzillaParams {
 }
 
 case class BugzillaRequest(method: String, params: BugzillaParams)
-case class BugzillaResponse(error: Option[BugzillaError], id: String, result: Option[BugzillaResult])
+case class BugzillaResponse[T](error: Option[BugzillaError], id: String, result: Option[T])
 case class BugzillaError(message: String, code: Int)
 case class BugzillaResult(bugs: List[BugzillaBug])
+case class BugzillaHistoryResult(bugs: List[BugzillaHistory])

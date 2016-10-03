@@ -43,6 +43,7 @@ class AkkaStreamTests extends FunSuite {
   test("File to File streaming") {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
+    implicit val ec = system.dispatcher
 
     val from = "d:/tmp/bugs/2016-09-30/bugs_all.json"
     val to = "bugs_history.json"
@@ -62,7 +63,6 @@ class AkkaStreamTests extends FunSuite {
 
     val histories: (Seq[Int]) => Seq[BugzillaHistory] = ids => {
       ids.map((id) => BugzillaHistory(id, Some(s"alias $id"), List()))
-      // httpClient sendRequest
     }
 
     val createItemChange: (BugzillaHistoryChange) => HistoryItemChange = item => {
@@ -74,7 +74,7 @@ class AkkaStreamTests extends FunSuite {
     }
 
     val createHistory: (BugzillaHistory) => BugHistory = history => {
-      BugHistory(history.id, history.alias, history.historyItems.map(createHistoryItem))
+      BugHistory(history.id, history.alias, history.history.map(createHistoryItem))
     }
 
     val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
@@ -98,23 +98,28 @@ class AkkaStreamTests extends FunSuite {
       case bugs: List[Bug] => bugs
     }
 
-    val future = source.via(CirceStreamSupport.decode[BugzillaResponse]).via(Flow[BugzillaResponse].map(_.result.get.bugs)).
+    val futureBugs = source.via(CirceStreamSupport.decode[BugzillaResponse[BugzillaResult]]).via(Flow[BugzillaResponse[BugzillaResult]].map(_.result.get.bugs)).
       mapConcat(identity).filter(importantBugs).grouped(batchSize).
       map(batchUpdate).collect(collectBugs).via(CirceStreamSupport.encode[Seq[Bug]]).runWith(sink)
+    val result1 = Await.result(futureBugs, 5.seconds)
 
-    val result = Await.result(future, 5.seconds)
+    val futureHistories = fileSource("d:/tmp/bugs/2016-10-03/bugs_history.json").
+      via(CirceStreamSupport.decode[BugzillaResponse[BugzillaHistoryResult]]).
+      via(Flow[BugzillaResponse[BugzillaHistoryResult]].map(_.result.get.bugs)).
+      toMat(Sink.seq)(Keep.right)
+    val result2 = Await.result(futureHistories.run().map(_.flatten), 5.seconds)
+
+    println(result2)
   }
 
   test("Streaming processed data") {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
 
-    val from = "bugs_history.json"
+    val from = "d:/tmp/bugs/2016-10-03/bugs.json"
 
     val source = fileSource(from)
-
     val future = source.via(CirceStreamSupport.decode[List[Bug]]).mapConcat(identity).runForeach(println)
-
     val result = Await.result(future, 5.seconds)
   }
 

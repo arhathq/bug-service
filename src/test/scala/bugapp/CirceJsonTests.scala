@@ -1,20 +1,7 @@
 package bugapp
 
-import java.io.File
-import java.time.OffsetDateTime
-import java.time.temporal.IsoFields
-
 import org.scalatest.FunSuite
-import bugapp.bugzilla.{BugzillaBug, BugzillaParams, BugzillaRequest}
-import io.circe.parser._
-import io.circe.streaming._
-import io.circe.{Decoder, Encoder, HCursor, Printer, Json => JsonC}
-import io.iteratee.Enumerator
-import io.iteratee.scalaz.task._
-
-import scala.collection.mutable
-import scalaz.{-\/, \/, \/-}
-import scalaz.concurrent.Task
+import io.circe.{Decoder, Encoder, Printer, Json => JsonC}
 
 /**
   * @author Alexander Kuleshov
@@ -35,14 +22,17 @@ class CirceJsonTests extends FunSuite {
   //  println(err)
 
   case class Params(username: String, password: Option[String] = None, status: Option[List[String]] = None)
+
   object Params {
     def apply(username: String): Params = new Params(username)
+
     def apply(username: String, password: String): Params = new Params(username, Some(password), None)
 
     def jsonPrinter(): Printer = Printer(preserveOrder = true, dropNullKeys = true, indent = "")
   }
 
   case class Bar(i: String)
+
   object Bar {
     implicit val decodeB: Decoder[Bar] = Decoder.instance(c =>
       for {
@@ -65,16 +55,19 @@ class CirceJsonTests extends FunSuite {
   test("Implicit encoder") {
     implicit val encodeStringorList: Encoder[Either[String, List[String]]] =
       Encoder.instance(_.fold(_.asJson, _.asJson))
+
     @inline def encodeC[A](a: A)(implicit encode: Encoder[A]): JsonC = encode(a)
+
     println(encodeC(List(Map[String, Either[String, List[String]]]("a" -> Left("b"), "b" -> Left("d"), "d" -> Left("1"), "e" -> Right(List("1", "2"))))))
 
-    //  println(Map("a" -> "1", "b" -> "2").asJson.noSpaces)
+    println(Map("a" -> "1", "b" -> "2").asJson.noSpaces)
   }
 
   test("Iterating through Json") {
     import io.circe._, io.circe.parser._
 
-    val json: String = """
+    val json: String =
+      """
       {
         "id": "c730433b-082c-4984-9d66-855c243266f0",
         "name": "Foo",
@@ -85,7 +78,7 @@ class CirceJsonTests extends FunSuite {
           "qux": ["a", "b"],
           "result" : {
             "bugs" : [
-              {"q" : "1"}, {"q" : "2"}, {"z" : "3"}
+              {"q" : "1"}, {"q" : "2"}, {"q" : "3"}
             ]
           }
         }
@@ -101,7 +94,7 @@ class CirceJsonTests extends FunSuite {
 
     // You can also use `get[A](key)` as shorthand for `downField(key).as[A]`
     val baz2: Decoder.Result[Double] =
-    cursor.downField("values").get[Double]("baz")
+      cursor.downField("values").get[Double]("baz")
 
     val secondQux: Decoder.Result[String] =
       cursor.downField("values").downField("qux").downArray.right.as[String]
@@ -114,37 +107,6 @@ class CirceJsonTests extends FunSuite {
     val arrayBugs: Decoder.Result[Array[Bar]] =
       cursor.downField("values").downField("result").downField("bugs").as[Array[Bar]]
     println(arrayBugs.getOrElse(Array[Bar]()).length)
-
-    println(cursor.downField("values").downField("result").downField("bugs").as[Array[Bar]])
-
-  }
-
-  test("Json Streaming") {
-//    val list = (1 to 100000000).toStream
-
-    val source: Enumerator[Task, BugzillaBug] =
-      readBytes(new File("bugzilla-raw-data.txt")).through(byteParser).through(decoder[Task, BugzillaBug])
-
-    implicit val date = OffsetDateTime.now
-
-//    val task = bugs.into(length)
-
-//    println(task)
-//    println(task.unsafePerformSync)
-
-    val step = 100
-    val task =
-      source.through(filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))).toVector
-//    filter(_.creation_time.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR) == date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR))
-    println(task.unsafePerformSync)
-
-
-  }
-
-  def normalize(json: JsonC): JsonC = {
-//    val res = json
-    val res = json.hcursor.downField("result").downField("bugs").downArray.delete.focus.getOrElse(JsonC.Null)
-    res
   }
 
 }

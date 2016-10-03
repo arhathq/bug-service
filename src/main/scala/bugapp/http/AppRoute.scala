@@ -24,10 +24,10 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
   implicit val timeout = Timeout(5 seconds)
 
   val routes =
-    path("bugs" / IntNumber) { week =>
+    path("bugs" / IntNumber ) { weeks =>
       get {
         extractRequest { req =>
-          sendResponse(bugRepository.getBugs(LocalDate.now.minusWeeks(week)))
+          sendResponse(bugRepository.getBugs(LocalDate.now.minusWeeks(weeks)))
         }
       }
     } ~

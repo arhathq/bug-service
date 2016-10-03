@@ -31,6 +31,8 @@ class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, impli
 
   val settings = ConnectionPoolSettings(config)
 
+  val logLimitSize = 1024
+
   def connectionFlow[Context]: Flow[(HttpRequest, Context), (Try[HttpResponse], Context), Any] = scheme match {
     case "http" =>
       Http().cachedHostConnectionPool[Context](hostName, port, settings)
@@ -73,8 +75,8 @@ class HttpClient(url: String, config: Config)(implicit val s: ActorSystem, impli
       .flatMap(Future.fromTry)(ec)
   }
 
-  private def log(message: String, value: Any): Unit = {
+  private def log(message: String, value: Any): Unit = { //todo: improve log output of cutted string
     val valueStr = value.toString
-    logger.debug(s"$message ${valueStr.substring(0, valueStr.length.min(255))}")
+    logger.debug(s"$message ${valueStr.substring(0, valueStr.length.min(logLimitSize))}")
   }
 }

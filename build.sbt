@@ -7,7 +7,6 @@ scalaVersion := "2.11.8"
 libraryDependencies ++= {
   val akkaVersion         = "2.4.5"
   val circeVersion        = "0.5.2"
-  val iterateeVersion     = "0.6.1"
   val scalaTestVersion    = "2.2.6"
   val scalaAsyncVersion   = "0.9.5"
   val scalaXmlVersion     = "1.0.4"
@@ -30,9 +29,6 @@ libraryDependencies ++= {
     "io.circe"               %% "circe-core"                        % circeVersion,
     "io.circe"               %% "circe-generic"                     % circeVersion,
     "io.circe"               %% "circe-parser"                      % circeVersion,
-    "io.circe"               %% "circe-streaming"                   % circeVersion,
-    "io.iteratee"            %% "iteratee-core"                     % iterateeVersion,
-    "io.iteratee"            %% "iteratee-scalaz"                   % iterateeVersion,
 
     "org.scalaz"             %% "scalaz-core"                       % scalazVersion,
     "org.scalaz"             %% "scalaz-concurrent"                 % scalazVersion,
