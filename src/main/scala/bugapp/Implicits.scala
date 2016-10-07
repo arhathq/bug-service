@@ -3,7 +3,7 @@ package bugapp
 import java.time.{LocalDate, OffsetDateTime}
 
 import bugapp.bugzilla._
-import bugapp.repository.{Bug, BugHistory, HistoryItem, HistoryItemChange}
+import bugapp.repository._
 import io.circe.generic.semiauto._
 import io.circe.{Decoder, Encoder, Printer}
 import io.circe.syntax._
@@ -31,6 +31,8 @@ object Implicits {
 
   implicit val decoderBug: Decoder[Bug] = deriveDecoder[Bug]
   implicit val encoderBug: Encoder[Bug] = deriveEncoder[Bug]
+  implicit val decoderBugStats: Decoder[BugStats] = deriveDecoder[BugStats]
+  implicit val encoderBugStats: Encoder[BugStats] = deriveEncoder[BugStats]
   implicit val decoderBugHistory: Decoder[BugHistory] = deriveDecoder[BugHistory]
   implicit val encoderBugHistory: Encoder[BugHistory] = deriveEncoder[BugHistory]
   implicit val decoderBugHistoryItem: Decoder[HistoryItem] = deriveDecoder[HistoryItem]

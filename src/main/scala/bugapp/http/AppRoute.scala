@@ -11,7 +11,6 @@ import bugapp.Implicits._
 import bugapp.report.ReportActor._
 import bugapp.repository.BugRepository
 import io.circe.generic.auto._
-import io.circe.syntax._
 
 import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext

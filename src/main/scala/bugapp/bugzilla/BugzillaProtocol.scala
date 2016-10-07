@@ -1,6 +1,8 @@
 package bugapp.bugzilla
 
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.format.DateTimeFormatter
+import java.time.temporal.Temporal
+import java.time._
 
 import bugapp.Implicits._
 
@@ -14,7 +16,7 @@ case class BugzillaBug(id: Int,
                        creation_time: OffsetDateTime,
                        status: String,
                        is_open: Boolean,
-                       assigned_to: Option[String],
+                       assigned_to: String,
                        last_change_time: Option[OffsetDateTime],
                        summary: String,
                        cf_project_team: Option[String],
@@ -26,7 +28,7 @@ case class BugzillaBug(id: Int,
                        cf_v1_reference: Option[String],
                        estimated_time: Int,
                        remaining_time: Int,
-                       resolution: Option[String],
+                       resolution: String,
                        classification: Option[String],
                        cf_versiononestate: Option[String],
                        cf_databasestoupdate: Option[String],
@@ -65,3 +67,73 @@ case class BugzillaResponse[T](error: Option[BugzillaError], id: String, result:
 case class BugzillaError(message: String, code: Int)
 case class BugzillaResult(bugs: List[BugzillaBug])
 case class BugzillaHistoryResult(bugs: List[BugzillaHistory])
+
+object Metrics {
+
+  private val weeksStrFormat = DateTimeFormatter.ofPattern("uuuu-ww")
+
+  val InvalidStatus = "Invalid"
+  val FixedStatus = "Fixed"
+  val OpenStatus = "Open"
+
+  val ResolvedIn2Days = " < 2 days"
+  val ResolvedIn6Days = "2-6 days"
+  val ResolvedIn30Days = "6-30 days"
+  val ResolvedIn90Days = "30-90 days"
+  val ResolvedInMoreThan90Days = " > 90 days"
+
+  val resolvedStatuses = List("RESOLVED", "VERIFIED", "CLOSED")
+  val resolvedResolutions = List("INVALID", "WORKSFORME", "DUPLICATE", "WONTFIX")
+
+  def getStatus(status: String, resolution: String): String = {
+    if (resolvedStatuses.contains(status)) {
+      if (resolvedResolutions.contains(resolution)) return InvalidStatus else return FixedStatus
+    }
+    OpenStatus
+  }
+
+  def isWeekend(date: LocalDate): Boolean = date.getDayOfWeek match {
+    case DayOfWeek.SUNDAY => true
+    case DayOfWeek.SATURDAY => true
+    case _ => false
+  }
+
+  def weekFormat(date: Temporal): String = weeksStrFormat.format(date)
+
+  def age(priority: String, from: Temporal, to: Option[Temporal]): (Int, String, Boolean) = {
+    val daysOpen = Duration.between(from, to.getOrElse(OffsetDateTime.now)).toDays.toInt
+    var passSla = false
+    priority match {
+      case "P1" if daysOpen < 3  => passSla = true
+      case "P2" if daysOpen < 7  => passSla = true
+      case "P3" if daysOpen < 31 => passSla = true
+      case _ => passSla = false
+    }
+
+    var resolvedPeriod = ResolvedInMoreThan90Days
+    if (daysOpen < 3)  resolvedPeriod = ResolvedIn2Days
+    else if (daysOpen < 7)  resolvedPeriod = ResolvedIn6Days
+    else if (daysOpen < 31) resolvedPeriod = ResolvedIn30Days
+    else if (daysOpen < 91) resolvedPeriod = ResolvedIn90Days
+
+    (daysOpen, resolvedPeriod, passSla)
+  }
+
+  def resolvedInfo(date: OffsetDateTime, bugHistory: BugzillaHistory): (OffsetDateTime, Option[OffsetDateTime], Int) = {
+    var openedTime = date
+    var resolvedTime: Option[OffsetDateTime] = None
+    var reopenedCount = 0
+    for (history <- bugHistory.history) {
+      for (change <- history.changes) {
+        if (change.field_name == "status" && change.added == "REOPENED") {
+          reopenedCount = reopenedCount + 1
+          openedTime = history.when
+        }
+        if (change.field_name == "status" && change.added == "RESOLVED") {
+          resolvedTime = Some(history.when)
+        }
+      }
+    }
+    (openedTime, resolvedTime, reopenedCount)
+  }
+}

@@ -24,17 +24,18 @@ case class Bug(id: Int,
                environment: String,
                summary: String,
                hardware: String,
-               open: Option[String],
-               env: Option[String],
-               week: Option[Int],
-               weekStr: Option[String],
-               source: Option[String],
-               daysOpen: Option[Double],
-               age: Option[String],
-               history: Option[BugHistory]
+               stats: Option[BugStats]
               )
 case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])
 case class HistoryItem(when: OffsetDateTime, who: String, changes: Seq[HistoryItemChange])
 case class HistoryItemChange(removed: String, added: String, field: String)
+case class BugStats(status: String,
+                    openTime: OffsetDateTime,
+                    resolvedTime: Option[OffsetDateTime],
+                    daysOpen: Int,
+                    reopenCount: Int,
+                    resolvedPeriod: String,
+                    passSla: Boolean,
+                    openMonth: String)
 
 case class BugsError(message: String) extends Exception(message)

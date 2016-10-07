@@ -21,8 +21,6 @@ import org.scalatest.FunSuite
   */
 class AkkaStreamTests extends FunSuite {
 
-
-
   test("Simple Stream") {
     implicit val system = ActorSystem()
     implicit val ec = system.dispatcher
@@ -78,11 +76,10 @@ class AkkaStreamTests extends FunSuite {
     }
 
     val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
-      Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution.getOrElse(""),
-        bug.creator, bug.creation_time, bug.assigned_to.getOrElse(""),
+      Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution,
+        bug.creator, bug.creation_time, bug.assigned_to,
         bug.last_change_time.getOrElse(bug.creation_time),
-        bug.product, bug.component, "", bug.summary, "",
-        None, None, None, None, None, Some(0.0), Some(""), Some(createHistory(history)))
+        bug.product, bug.component, "", bug.summary, "", None)
     }
 
     val batchUpdate: (Seq[BugzillaBug]) => List[Bug] = bugs => {

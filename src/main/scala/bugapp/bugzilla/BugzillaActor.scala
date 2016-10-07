@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.nio.file.Paths
-import java.time.LocalDate
+import java.time.{LocalDate, OffsetDateTime}
 import java.time.temporal.ChronoField
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -12,7 +12,7 @@ import akka.util.ByteString
 import bugapp.{BugzillaConfig, UtilsIO}
 import bugapp.http.HttpClient
 import bugapp.Implicits._
-import bugapp.repository.{Bug, BugHistory, HistoryItem, HistoryItemChange}
+import bugapp.repository._
 import de.knutwalker.akka.stream.support.CirceStreamSupport
 
 import scala.collection.mutable
@@ -27,7 +27,7 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
   implicit val ec = context.dispatcher
   implicit val materializer = ActorMaterializer()
 
-  val senders = mutable.Set.empty[ActorRef]
+  private val senders = mutable.Set.empty[ActorRef]
 
   val batchSize = 200
   val parallel = 8
@@ -154,17 +154,34 @@ object BugzillaActor {
     BugHistory(history.id, history.alias, history.history.map(createHistoryItem))
   }
 
+  val createBugStats: (BugzillaBug, BugzillaHistory) => BugStats = (bug, bugHistory) => {
+    var openedTime = bug.creation_time
+    var resolvedTime: Option[OffsetDateTime] = None
+    var reopenedCount = 0
+    for (history <- bugHistory.history) {
+      for (change <- history.changes) {
+        if (change.field_name == "status" && change.added == "REOPENED") {
+          reopenedCount = reopenedCount + 1
+          openedTime = history.when
+        }
+        if (change.field_name == "status" && change.added == "RESOLVED") {
+          resolvedTime = Some(history.when)
+        }
+      }
+    }
+    val (daysOpen, resolvedPeriod, passSla) = Metrics.age(bug.priority, openedTime, resolvedTime)
+    val weekStr = Metrics.weekFormat(bug.creation_time)
+    val status = Metrics.getStatus(bug.status, bug.resolution)
+    BugStats(status, openedTime, resolvedTime, daysOpen, reopenedCount, resolvedPeriod, passSla, weekStr)
+  }
+
+  val priority: (String) => String = priority => if (priority == "not prioritized") "NP" else priority
+
   val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
-    val open = Some("")
-    val env = Some("")
-    val week = Some(bug.creation_time.get(ChronoField.ALIGNED_WEEK_OF_YEAR))
-    val weekStr = Some("")
-    val source = Some("")
-    val daysOpen = Some(0.0)
-    val age = None
-    Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution.getOrElse(""),
-      bug.creator, bug.creation_time, bug.assigned_to.getOrElse(""),
+    Bug(bug.id, bug.severity, priority(bug.priority), bug.status, bug.resolution,
+      bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
-      bug.product, bug.component, "", bug.summary, "", open, env, week, weekStr, source, daysOpen, age, Some(createHistory(history)))
+      bug.product, bug.component, "", bug.summary, "",
+      Some(createBugStats(bug, history)))
   }
 }
