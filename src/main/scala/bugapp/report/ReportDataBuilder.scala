@@ -3,7 +3,7 @@ package bugapp.report
 import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 
 import scala.collection.mutable
@@ -17,13 +17,15 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
   private val data = mutable.Map.empty[String, List[Elem]]
 
-  def createWorkers(reportId: String): Set[ActorRef] = {
-    Set(context.actorOf(AllOpenBugsReportActor.props(self)))
+  def createWorkers(reportType: String): Set[ActorRef] = reportType match {
+    case "weekly" => Set(context.actorOf(AllOpenBugsReportActor.props(self)))
+    case "sla" => Set(context.actorOf(SlaReportActor.props()))
+    case _ => Set()
   }
 
   override def receive: Receive = {
-    case ReportDataRequest(reportId, bugs) =>
-      val workers = createWorkers(reportId)
+    case GetReportData(reportId, reportType, bugs) =>
+      val workers = createWorkers(reportType)
       jobs += reportId -> workers
       log.info(s"Job [$reportId], Workers $jobs")
       workers.foreach(_ ! ReportDataRequest(reportId, bugs))
@@ -65,6 +67,8 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 }
 
 object ReportDataBuilder {
+  case class GetReportData(reportId: String, reportType: String, bugs: Seq[Bug])
+
   case class ReportDataRequest(reportId: String, bugs: Seq[Bug])
   case class ReportDataResponse(reportId: String, result: Elem)
 

@@ -5,7 +5,7 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.ReportConfig
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataResponse}
 import bugapp.report.ReportGenerator.{GenerateReport, ReportGenerated}
 import bugapp.repository.BugRepository
 
@@ -24,7 +24,7 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
   val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, templateDir, self), "reportGenerator")
 
   override def receive: Receive = {
-    case GetReport(weeks) =>
+    case GetReport(reportType, weeks) =>
       log.info(s"Weeks period: $weeks")
       if (senders.size >= maxJobs)
         sender !  ReportResult(report = None, error = Some(s"Max reports is limited: $maxJobs"))
@@ -35,7 +35,7 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
 
         bugsFuture.foreach { bugs =>
           val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
-          reportDataBuilder ! ReportDataRequest(reportId, bugs)
+          reportDataBuilder ! GetReportData(reportId, reportType, bugs)
         }
       }
 
@@ -62,7 +62,7 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
 
 object ReportActor {
   def props(bugRepository: BugRepository) = Props(classOf[ReportActor], bugRepository)
-  case class GetReport(weeks: Int)
+  case class GetReport(reportType: String, weeks: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 
   case class ReportError(reportId: String, message: String)

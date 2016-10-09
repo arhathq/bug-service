@@ -30,10 +30,10 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
         }
       }
     } ~
-    path("report" / IntNumber ) { weeks =>
+    path("report" / Segment / "weeks" / IntNumber) { (reportType, weeks) =>
       get {
         extractRequest { req =>
-          sendResponse(ask(reportActor, GetReport(weeks)).mapTo[ReportResult])
+          sendResponse(ask(reportActor, GetReport(reportType, weeks)).mapTo[ReportResult])
         }
       }
     }
