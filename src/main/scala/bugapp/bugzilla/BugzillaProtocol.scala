@@ -100,8 +100,26 @@ object Metrics {
 
   def weekFormat(date: Temporal): String = weeksStrFormat.format(date)
 
+  def durationInBusinessDays(fromInc: Temporal, toExc: Option[Temporal]): Int = {
+    if (toExc.isEmpty) return 0
+    val start = OffsetDateTime.from(fromInc)
+    val end = OffsetDateTime.from(toExc.get)
+    if (start.isAfter(end)) return 0
+    calculateDuration(start, end, 0)
+  }
+
+  private def calculateDuration(start: OffsetDateTime, end: OffsetDateTime, acc: Int): Int = {
+    if (start.isBefore(end)) {
+      if (start.getDayOfWeek == DayOfWeek.SUNDAY || start.getDayOfWeek == DayOfWeek.SATURDAY)
+        calculateDuration(start.plusDays(1), end, acc)
+      else
+        calculateDuration(start.plusDays(1), end, acc + 1)
+    }
+    else acc
+  }
+
   def age(priority: String, from: Temporal, to: Option[Temporal]): (Int, String, Boolean) = {
-    val daysOpen = Duration.between(from, to.getOrElse(OffsetDateTime.now)).toDays.toInt
+    val daysOpen = durationInBusinessDays(from, to)
     var passSla = false
     priority match {
       case "P1" if daysOpen < 3  => passSla = true

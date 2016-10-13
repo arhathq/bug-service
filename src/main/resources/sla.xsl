@@ -15,7 +15,8 @@
                 <xsl:apply-templates select="report-header"/>
                 <fo:flow flow-name="xsl-region-body">
                     <fo:block/>
-                    <xsl:apply-templates select="out-sla-bugs"/>
+                    <xsl:apply-templates select="sla/out-sla-bugs"/>
+                    <fo:block id='end'/>
                 </fo:flow>
             </fo:page-sequence>
 
@@ -36,44 +37,76 @@
     </xsl:template>
 
     <xsl:template match="out-sla-bugs">
-        <fo:block font-size="12pt" font-weight="bold">P1/P2 out of SLA</fo:block>
+        <fo:block font-size="12pt" font-weight="bold" space-after="5mm">P1/P2 out of SLA</fo:block>
         <fo:block font-size="10pt">
-            <fo:table width="100%" border-collapse="collapse">
-                <fo:table-header color="white" background-color="#5b9bd5">
-                    <fo:table-cell border="solid .5px black" padding="1em" width="3cm">
-                        <fo:block text-align="justify" font-weight="bold">Priority</fo:block>
-                    </fo:table-cell>
-                    <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
-                        <fo:block text-align="justify" font-weight="bold">Bug number</fo:block>
-                    </fo:table-cell>
-                </fo:table-header>
-                <fo:table-body>
-                    <xsl:apply-templates select="number-of-bugs"/>
-                </fo:table-body>
-            </fo:table>
-            <fo:block font-size="8pt" text-align="right">* As of <xsl:value-of select="format-dateTime(//report-header/date, '[FNn], [D]-[MN,*-3]-[Y], [h]:[m01][PN] [z]', 'en', (), ())"/></fo:block>
-            <fo:block font-size="8pt" text-align="right">** Excluding CRF Hot Deploys, EComm Hot Deploys, `Dataload Failed`, `New Files Arrived` and `Data Consistency` Reports</fo:block>
+            P1: <xsl:value-of select="p1-bugs"/>  P2: <xsl:value-of select="p2-bugs"/>
         </fo:block>
+        <xsl:apply-templates select="list"/>
         <!--<fo:block text-align="center">-->
             <!--<fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>-->
         <!--</fo:block>-->
     </xsl:template>
 
-    <xsl:template match="out-sla-bugs/number-of-bugs">
+    <xsl:template match="list">
+        <fo:block font-size="10pt" space-after=".5cm" space-before=".5cm" margin-left="0">
+            <fo:table width="100%" border-collapse="collapse">
+                <fo:table-header font-weight="bold" text-align="justify">
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="1.5cm">
+                        <fo:block>Bug ID</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="1.5cm">
+                        <fo:block>Priority</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Opened</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Days open</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Reopened</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="8cm">
+                        <fo:block>Summary</fo:block>
+                    </fo:table-cell>
+                </fo:table-header>
+                <fo:table-body>
+                    <xsl:apply-templates select="bug"/>
+                </fo:table-body>
+            </fo:table>
+        </fo:block>
+    </xsl:template>
+
+    <xsl:template match="list/bug">
         <fo:table-row>
-            <xsl:choose>
-                <xsl:when test="priority = 'P1'"><xsl:attribute name="color">red</xsl:attribute></xsl:when>
-                <xsl:when test="priority = 'P2'"><xsl:attribute name="color">blue</xsl:attribute></xsl:when>
-                <xsl:when test="priority = 'Grand Total'"><xsl:attribute name="font-weight">bold</xsl:attribute></xsl:when>
-            </xsl:choose>
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="id"/>
+                </fo:block>
+            </fo:table-cell>
             <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
                 <fo:block>
                     <xsl:value-of select="priority"/>
                 </fo:block>
             </fo:table-cell>
-            <fo:table-cell border="solid .5px black" padding-right=".5em" padding-top=".5em" text-align="right">
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="number"/>
+                    <xsl:value-of select="format-dateTime(opened, '[M01]/[D01]/[Y0001] [H01]:[m01]', 'en', (), ())"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="daysOpen"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="reopenedCount"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="summary"/>
                 </fo:block>
             </fo:table-cell>
         </fo:table-row>
