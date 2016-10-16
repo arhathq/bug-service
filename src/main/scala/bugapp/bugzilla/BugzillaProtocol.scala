@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.time.format.DateTimeFormatter
-import java.time.temporal.Temporal
+import java.time.temporal.{ChronoField, Temporal}
 import java.time._
 
 import bugapp.Implicits._
@@ -101,9 +101,8 @@ object Metrics {
   def weekFormat(date: Temporal): String = weeksStrFormat.format(date)
 
   def durationInBusinessDays(fromInc: Temporal, toExc: Option[Temporal]): Int = {
-    if (toExc.isEmpty) return 0
     val start = OffsetDateTime.from(fromInc)
-    val end = OffsetDateTime.from(toExc.get)
+    val end = OffsetDateTime.from(toExc.getOrElse(OffsetDateTime.now))
     if (start.isAfter(end)) return 0
     calculateDuration(start, end, 0)
   }
@@ -153,5 +152,10 @@ object Metrics {
       }
     }
     (openedTime, resolvedTime, reopenedCount)
+  }
+
+  val marks: (OffsetDateTime, Int) => Seq[String] = (date, weeks) => {
+    val week = date.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
+    (week to (week - weeks + 1) by -1).map(w => weeksStrFormat.format(date.minusWeeks(week - w))).reverse
   }
 }

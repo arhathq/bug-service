@@ -162,7 +162,7 @@ object BugzillaActor {
       for (change <- history.changes) {
         if (change.field_name == "status" && change.added == "REOPENED") {
           reopenedCount = reopenedCount + 1
-          openedTime = history.when
+//          openedTime = history.when
         }
         if (change.field_name == "status" && change.added == "RESOLVED") {
           resolvedTime = Some(history.when)
@@ -182,6 +182,6 @@ object BugzillaActor {
       bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
       bug.product, bug.component, "", bug.summary, "",
-      Some(createBugStats(bug, history)))
+      createBugStats(bug, history))
   }
 }

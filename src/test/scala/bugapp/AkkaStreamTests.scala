@@ -11,7 +11,7 @@ import java.nio.file.Paths
 import akka.stream._
 import akka.stream.scaladsl._
 import bugapp.bugzilla._
-import bugapp.repository.{Bug, BugHistory, HistoryItem, HistoryItemChange}
+import bugapp.repository._
 import bugapp.Implicits._
 import de.knutwalker.akka.stream.support.CirceStreamSupport
 import org.scalatest.FunSuite
@@ -75,11 +75,18 @@ class AkkaStreamTests extends FunSuite {
       BugHistory(history.id, history.alias, history.history.map(createHistoryItem))
     }
 
+    val createBugStats: (BugzillaBug, BugzillaHistory) => BugStats = (bug, history) => {
+      val (daysOpen, resolvedPeriod, passSla) = Metrics.age(bug.priority, bug.creation_time, bug.last_change_time)
+      val weekStr = Metrics.weekFormat(bug.creation_time)
+      val status = Metrics.getStatus(bug.status, bug.resolution)
+      BugStats(status, bug.creation_time, bug.last_change_time, bug.actual_time, 0, resolvedPeriod, passSla, weekStr)
+    }
+
     val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
       Bug(bug.id, bug.severity, bug.priority, bug.status, bug.resolution,
         bug.creator, bug.creation_time, bug.assigned_to,
         bug.last_change_time.getOrElse(bug.creation_time),
-        bug.product, bug.component, "", bug.summary, "", None)
+        bug.product, bug.component, "", bug.summary, "", createBugStats(bug, history))
     }
 
     val batchUpdate: (Seq[BugzillaBug]) => List[Bug] = bugs => {

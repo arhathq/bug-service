@@ -24,7 +24,7 @@ case class Bug(id: Int,
                environment: String,
                summary: String,
                hardware: String,
-               stats: Option[BugStats]
+               stats: BugStats
               )
 case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])
 case class HistoryItem(when: OffsetDateTime, who: String, changes: Seq[HistoryItemChange])

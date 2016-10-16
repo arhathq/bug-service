@@ -8,7 +8,7 @@ import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 
-import scala.xml.Elem
+import scala.xml.{Elem, Group, Null, TopScope}
 
 /**
   *
@@ -18,23 +18,29 @@ class SlaReportActor extends Actor with ActorLogging {
 
   private val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
+  private val weekPeriod = 4
+  private val startDate = OffsetDateTime.now
+
   override def receive: Receive = {
     case ReportDataRequest(reportId, bugs) =>
-      val bugs4weeks = bugs.filter(bugsFor4Weeks)
+      val marks = Metrics.marks(startDate, weekPeriod)
+      val bugs4weeks = bugs.filter(bugsForPeriod(_, startDate, weekPeriod))
       val outSlaBugs = bugsOutSla(bugs4weeks)
-      val p1 = outSlaBugs.getOrElse("P1", Seq())
-      val p2 = outSlaBugs.getOrElse("P2", Seq())
+      val p1OutSla = outSlaBugs.getOrElse("P1", Seq())
+      val p2OutSla = outSlaBugs.getOrElse("P2", Seq())
 
       val data =
         <sla>
-          {bugsOutSlaElem(p1, p2)}
+          {bugsOutSlaElem(p1OutSla, p2OutSla)}
           <p1-sla>
+            {sla("P1", marks, p1OutSla, bugs4weeks.filter(_.priority == "P1"))}
             <image>
               <contype-type></contype-type>
               <contype-value></contype-value>
             </image>
           </p1-sla>
           <p2-sla>
+            {sla("P2", marks, p2OutSla, bugs4weeks.filter(_.priority == "P2"))}
             <image>
               <contype-type></contype-type>
               <contype-value></contype-value>
@@ -73,8 +79,14 @@ class SlaReportActor extends Actor with ActorLogging {
         <id>{bug.id}</id>
         <priority>{bug.priority}</priority>
         <opened>{dateFormat.format(bug.opened)}</opened>
-        <daysOpen>{bug.stats.get.daysOpen}</daysOpen>
-        <reopenedCount>{bug.stats.get.reopenCount}</reopenedCount>
+        <resolved>{
+           bug.stats.resolvedTime match {
+             case Some(time) => dateFormat.format(time)
+             case None => ""
+            }
+          }</resolved>
+        <daysOpen>{bug.stats.daysOpen}</daysOpen>
+        <reopenedCount>{bug.stats.reopenCount}</reopenedCount>
         <summary>{bug.summary}</summary>
       </bug>
     }
@@ -82,8 +94,33 @@ class SlaReportActor extends Actor with ActorLogging {
 
   def chart(bugs: Seq[Bug]): Array[Byte] = ???
 
-  def sla(p1: Seq[Bug], p2: Seq[Bug]): Elem = {
-      <node/>
+  def sla(priority: String, marks:Seq[String], bugsOutSla: Seq[Bug], allBugs: Seq[Bug]): Elem = {
+    val slaGrouped = bugsOutSla.groupBy(bug => bug.stats.openMonth)
+    val allGrouped = allBugs.groupBy(bug => bug.stats.openMonth)
+    val res = marks.map(mark => slaGrouped.get(mark) match {
+      case Some(v) =>
+        <week-period>
+          <priority>{priority}</priority>
+          <week>{mark}</week>
+          <count>{v.length}</count>
+          <totalCount>{allGrouped.getOrElse(mark, Seq()).length}</totalCount>
+        </week-period>
+      case None =>
+        <week-period>
+          <priority>{priority}</priority>
+          <week>{mark}</week>
+          <count>0</count>
+          <totalCount>{allGrouped.getOrElse(mark, Seq()).length}</totalCount>
+        </week-period>
+    })
+    val total =
+      <week-period>
+        <priority>{priority}</priority>
+        <week>Grand Total</week>
+        <count>{slaGrouped.map(v => v._2.length).sum}</count>
+        <totalCount>{allBugs.length}</totalCount>
+      </week-period>
+    Elem.apply(null, s"sla-achievement", Null, TopScope, true, Group(res), total)
   }
 
 }
@@ -91,8 +128,8 @@ class SlaReportActor extends Actor with ActorLogging {
 object SlaReportActor {
   def props() = Props(classOf[SlaReportActor])
 
-  val bugsFor4Weeks: (Bug) => Boolean = bug => {
-    val from = OffsetDateTime.now.minusWeeks(4)
+  val bugsForPeriod: (Bug, OffsetDateTime, Int) => Boolean = (bug, startDate, weekPeriod) => {
+    val from = startDate.minusWeeks(weekPeriod)
     bug.priority match {
       case "P1" if bug.opened.isAfter(from) => true
       case "P2" if bug.opened.isAfter(from) => true
@@ -101,18 +138,13 @@ object SlaReportActor {
   }
 
   val slaBugs: (Seq[Bug]) => Map[String, Seq[Bug]] = bugs => {
-    bugs.groupBy(bug => bug.stats match {
-      case Some(stats) if stats.resolvedPeriod == Metrics.ResolvedIn2Days => Metrics.ResolvedIn2Days
-      case Some(stats) if stats.resolvedPeriod == Metrics.ResolvedIn6Days => Metrics.ResolvedIn6Days
-      case Some(stats) if stats.resolvedPeriod == Metrics.ResolvedIn30Days => Metrics.ResolvedIn30Days
-      case Some(stats) if stats.resolvedPeriod == Metrics.ResolvedIn90Days => Metrics.ResolvedIn90Days
-    })
+    bugs.groupBy(bug => bug.stats.resolvedPeriod)
   }
 
   val bugsOutSla: (Seq[Bug]) => Map[String, Seq[Bug]] = bugs => {
     bugs.groupBy(bug => bug.stats match {
-      case Some(stats) if !stats.passSla && bug.priority == "P1" => "P1"
-      case Some(stats) if !stats.passSla && bug.priority == "P2" => "P2"
+      case stats if !stats.passSla && bug.priority == "P1" => "P1"
+      case stats if !stats.passSla && bug.priority == "P2" => "P2"
       case _ => "sla"
     })
   }

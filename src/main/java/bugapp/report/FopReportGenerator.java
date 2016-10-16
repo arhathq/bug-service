@@ -47,7 +47,7 @@ public class FopReportGenerator {
         FopReportGenerator reportGenerator = new FopReportGenerator(new URI("fop1.xconf"));
 
         InputStream data = FopReportGenerator.class.getClassLoader().getResourceAsStream("bug-report.xml");
-        InputStream template = FopReportGenerator.class.getClassLoader().getResourceAsStream("bug-report.xsl");
+        InputStream template = FopReportGenerator.class.getClassLoader().getResourceAsStream("weekly.xsl");
 
         byte[] output = reportGenerator.generate(data, template);
         OutputStream os = new FileOutputStream("d:/report.pdf");
