@@ -1,12 +1,13 @@
 package bugapp.http
 
-import java.time.LocalDate
+import java.time.OffsetDateTime
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.server.Directives._
 import akka.pattern.ask
 import akka.util.Timeout
+import bugapp.BugApp
 import bugapp.Implicits._
 import bugapp.report.ReportActor._
 import bugapp.repository.BugRepository
@@ -26,14 +27,17 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
     path("bugs" / IntNumber ) { weeks =>
       get {
         extractRequest { req =>
-          sendResponse(bugRepository.getBugs(LocalDate.now.minusWeeks(weeks)))
+          val startDate = BugApp.fromDate(OffsetDateTime.now, weeks)
+          sendResponse(bugRepository.getBugs(startDate))
         }
       }
     } ~
     path("report" / Segment / "weeks" / IntNumber) { (reportType, weeks) =>
       get {
         extractRequest { req =>
-          sendResponse(ask(reportActor, GetReport(reportType, weeks)).mapTo[ReportResult])
+          val endDate = OffsetDateTime.now
+          val startDate = BugApp.fromDate(OffsetDateTime.now, weeks)
+          sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate)).mapTo[ReportResult])
         }
       }
     }

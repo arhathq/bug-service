@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.nio.file.Paths
-import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.temporal.ChronoField
 
 import akka.actor.{ActorRef, ActorSystem}
@@ -26,7 +26,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
 //  QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData())
 
-  def getBugs(fromDate: LocalDate): Future[Seq[Bug]] = {
+  def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
     getBugs((b: Bug) => {
       val weekOfYear = ChronoField.ALIGNED_WEEK_OF_YEAR
       if (b.opened.get(weekOfYear) >= fromDate.get(weekOfYear) && b.opened.getYear >= fromDate.getYear) true else false
@@ -49,7 +49,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   }
 
   def loadDataIfNeeded(): Future[String] = {
-    val dataPath = UtilsIO.bugzillaDataPath(rootPath, LocalDate.now)
+    val dataPath = UtilsIO.bugzillaDataPath(rootPath, OffsetDateTime.now)
     val repositoryPath = s"$dataPath/$repositoryFile"
     if (UtilsIO.ifFileExists(repositoryPath)) Future.successful(repositoryPath)
     else {

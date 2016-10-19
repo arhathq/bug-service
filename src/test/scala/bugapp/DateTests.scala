@@ -1,7 +1,8 @@
 package bugapp
 
 import java.time._
-import java.time.temporal.ChronoField
+import java.time.format.DateTimeFormatter
+import java.time.temporal.{ChronoField, WeekFields}
 
 import org.scalatest.FunSuite
 
@@ -30,5 +31,17 @@ class DateTests extends FunSuite {
     val duration = Duration.between(from, to)
 
     assert(duration.toDays == 4)
+  }
+
+  test("Build period") {
+    val to = OffsetDateTime.of(2016, 10, 19, 23, 0, 0, 0, ZoneOffset.UTC)
+    val weeks = 4
+    val field = WeekFields.ISO.dayOfWeek()
+
+    (1 to 10 by 1).map { week =>
+      val from = to.minusWeeks(week).`with`(field, 1)
+      println(s"${DateTimeFormatter.ISO_LOCAL_DATE.format(from)}")
+      from
+    }
   }
 }

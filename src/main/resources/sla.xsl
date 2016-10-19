@@ -55,7 +55,7 @@
         <!--</fo:block>-->
     </xsl:template>
 
-    <xsl:template match="list">
+    <xsl:template match="list[bug]">
         <fo:block font-size="10pt" space-after=".5cm" space-before=".5cm" margin-left="0">
             <fo:table width="100%" border-collapse="collapse">
                 <fo:table-header font-weight="bold" text-align="justify">
@@ -88,7 +88,7 @@
         </fo:block>
     </xsl:template>
 
-    <xsl:template match="list/bug">
+    <xsl:template match="bug">
         <fo:table-row>
             <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
                 <fo:block>

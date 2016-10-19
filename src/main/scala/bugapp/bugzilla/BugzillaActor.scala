@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.nio.file.Paths
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.time.temporal.ChronoField
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -9,7 +9,7 @@ import akka.http.scaladsl.model.{HttpMethods, Uri}
 import akka.stream.{ActorMaterializer, IOResult}
 import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, Source}
 import akka.util.ByteString
-import bugapp.{BugzillaConfig, UtilsIO}
+import bugapp.{BugApp, BugzillaConfig, UtilsIO}
 import bugapp.http.HttpClient
 import bugapp.Implicits._
 import bugapp.repository._
@@ -42,12 +42,13 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
 
       if (!senders.contains(sender())) senders.add(sender)
 
-      val date = LocalDate.now
-      val currentWeek = date.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
-      log.debug(s"Scheduled for data with params [date=$date; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
+      val curDate = OffsetDateTime.now.withHour(0).withMinute(0).withSecond(0).withOffsetSameInstant(ZoneOffset.UTC)
+      val startDate = BugApp.fromDate(curDate, fetchPeriod)
+      val currentWeek = curDate.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
+      log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$curDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
-      loadData(date.minusWeeks(fetchPeriod)).map { response =>
-        val dataPath = UtilsIO.bugzillaDataPath(rootPath, date)
+      loadData(startDate).map { response =>
+        val dataPath = UtilsIO.bugzillaDataPath(rootPath, curDate)
         val rawPath = s"$dataPath/bugs_origin.json"
         UtilsIO.createDirectoryIfNotExists(dataPath)
         UtilsIO.write(rawPath, response)
@@ -81,7 +82,7 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
     * params   [{"Bugzilla_login":"user","Bugzilla_password":"password","status":["RESOLVED"],"cf_target_milestone":["2016"],"cf_production":["Production"]}]
     * {"error":{"message":"When using JSON-RPC over GET, you must specify a 'method' parameter. See the documentation at docs/en/html/api/Bugzilla/WebService/Server/JSONRPC.html","code":32000},"id":"http://192.168.0.2","result":null}
     */
-  def loadData(startDate: LocalDate): Future[String] = {
+  def loadData(startDate: OffsetDateTime): Future[String] = {
     val params = BugzillaParams(bugzillaUsername, bugzillaPassword, startDate)
     val request = BugzillaRequest("Bug.search", params)
     httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)

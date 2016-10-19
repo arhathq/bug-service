@@ -1,9 +1,10 @@
 package bugapp.report
 
-import java.time.OffsetDateTime
+import java.time.{OffsetDateTime, ZoneOffset}
 import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, Props}
+import bugapp.BugApp
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
@@ -19,12 +20,12 @@ class SlaReportActor extends Actor with ActorLogging {
   private val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
   private val weekPeriod = 4
-  private val startDate = OffsetDateTime.now
+  private val toDate = OffsetDateTime.now.withOffsetSameLocal(ZoneOffset.UTC)
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, bugs) =>
-      val marks = Metrics.marks(startDate, weekPeriod)
-      val bugs4weeks = bugs.filter(bugsForPeriod(_, startDate, weekPeriod))
+      val marks = Metrics.marks(toDate, weekPeriod)
+      val bugs4weeks = bugs.filter(bugsForPeriod(_, BugApp.fromDate(toDate, weekPeriod)))
       val outSlaBugs = bugsOutSla(bugs4weeks)
       val p1OutSla = outSlaBugs.getOrElse("P1", Seq())
       val p2OutSla = outSlaBugs.getOrElse("P2", Seq())
@@ -128,11 +129,10 @@ class SlaReportActor extends Actor with ActorLogging {
 object SlaReportActor {
   def props() = Props(classOf[SlaReportActor])
 
-  val bugsForPeriod: (Bug, OffsetDateTime, Int) => Boolean = (bug, startDate, weekPeriod) => {
-    val from = startDate.minusWeeks(weekPeriod)
+  val bugsForPeriod: (Bug, OffsetDateTime) => Boolean = (bug, startDate) => {
     bug.priority match {
-      case "P1" if bug.opened.isAfter(from) => true
-      case "P2" if bug.opened.isAfter(from) => true
+      case "P1" if bug.opened.isAfter(startDate) => true
+      case "P2" if bug.opened.isAfter(startDate) => true
       case _ => false
     }
   }

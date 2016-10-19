@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.time.format.DateTimeFormatter
 import java.time.temporal.{ChronoField, Temporal}
-import java.time._
+import java.time.{DayOfWeek, OffsetDateTime}
 
 import bugapp.Implicits._
 
@@ -50,7 +50,7 @@ case class BugzillaHistoryItem(when: OffsetDateTime, who: String, changes: List[
 case class BugzillaHistoryChange(removed: String, added: String, field_name: String)
 case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
-                          creation_time: Option[LocalDate] = None,
+                          creation_time: Option[OffsetDateTime] = None,
                           ids: Option[Seq[Int]] = None,
                           cf_production: Option[String] = Some("Production")) {
   import io.circe.syntax._
@@ -58,7 +58,7 @@ case class BugzillaParams(Bugzilla_login: String,
   def toJsonString: String = List(this).asJson.pretty(implicitly)
 }
 object BugzillaParams {
-  def apply(username: String, password: String, startDate: LocalDate) = new BugzillaParams(username, password, creation_time = Some(startDate))
+  def apply(username: String, password: String, startDate: OffsetDateTime) = new BugzillaParams(username, password, creation_time = Some(startDate))
   def apply(username: String, password: String, ids: Seq[Int]) = new BugzillaParams(username, password, ids = Some(ids))
 }
 
@@ -92,7 +92,7 @@ object Metrics {
     OpenStatus
   }
 
-  def isWeekend(date: LocalDate): Boolean = date.getDayOfWeek match {
+  def isWeekend(date: OffsetDateTime): Boolean = date.getDayOfWeek match {
     case DayOfWeek.SUNDAY => true
     case DayOfWeek.SATURDAY => true
     case _ => false

@@ -1,5 +1,8 @@
 package bugapp
 
+import java.time.OffsetDateTime
+import java.time.temporal.WeekFields
+
 import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
@@ -20,18 +23,22 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
   protected val log: LoggingAdapter = Logging(system, getClass)
   protected implicit val materializer: ActorMaterializer = ActorMaterializer()
 
-  val httpClient = new HttpClient(bugzillaUrl, akkaConfig)
+  private val httpClient = new HttpClient(bugzillaUrl, akkaConfig)
 
-  val bugzillaActor = system.actorOf(BugzillaActor.props(httpClient), "bugzillaActor")
+  private val bugzillaActor = system.actorOf(BugzillaActor.props(httpClient), "bugzillaActor")
 
-  val bugRepository = new BugzillaRepository(bugzillaActor)
+  private val bugRepository = new BugzillaRepository(bugzillaActor)
 
-  val reportActor = system.actorOf(ReportActor.props(bugRepository), "reportActor")
+  private val reportActor = system.actorOf(ReportActor.props(bugRepository), "reportActor")
 
-  val restService = new RestApiService(bugRepository, reportActor)
+  private val restService = new RestApiService(bugRepository, reportActor)
 
   log.debug("Starting App...")
 
   Http().bindAndHandle(restService.routes, httpHost, httpPort)
 
+  def fromDate(toDate: OffsetDateTime, weeksPeriod: Int): OffsetDateTime = {
+    toDate.minusWeeks(weeksPeriod).`with`(WeekFields.ISO.dayOfWeek(), 1).
+      withHour(0).withMinute(0).withSecond(0).withNano(0)
+  }
 }

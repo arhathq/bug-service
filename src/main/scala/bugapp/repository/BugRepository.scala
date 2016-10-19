@@ -1,11 +1,11 @@
 package bugapp.repository
 
-import java.time.{LocalDate, OffsetDateTime}
+import java.time.OffsetDateTime
 
 import scala.concurrent.Future
 
 trait BugRepository {
-  def getBugs(fromDate: LocalDate): Future[Seq[Bug]]
+  def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]]
 
   def getBugHistory(bugId: List[Int]): Seq[BugHistory]
 }

@@ -3,7 +3,7 @@ package bugapp
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
 import java.nio.file.{Files, Paths}
-import java.time.LocalDate
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 /**
@@ -33,5 +33,5 @@ object UtilsIO {
   def createDirectoryIfNotExists(path: String) =
     if (!ifFileExists(path)) Files.createDirectory(Paths.get(path))
 
-  def bugzillaDataPath(rootPath: String, date: LocalDate): String = s"$rootPath/${repositoryDateFormat.format(date)}"
+  def bugzillaDataPath(rootPath: String, date: OffsetDateTime): String = s"$rootPath/${repositoryDateFormat.format(date)}"
 }
