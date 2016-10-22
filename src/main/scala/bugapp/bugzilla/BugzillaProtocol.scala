@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
-import java.time.format.DateTimeFormatter
-import java.time.temporal.{ChronoField, Temporal}
+import java.time.format.{DateTimeFormatterBuilder, SignStyle}
+import java.time.temporal.{IsoFields, Temporal}
 import java.time.{DayOfWeek, OffsetDateTime}
 
 import bugapp.Implicits._
@@ -70,7 +70,11 @@ case class BugzillaHistoryResult(bugs: List[BugzillaHistory])
 
 object Metrics {
 
-  private val weeksStrFormat = DateTimeFormatter.ofPattern("uuuu-ww")
+  val weeksStrFormat =
+    new DateTimeFormatterBuilder().
+      parseCaseInsensitive.appendValue(IsoFields.WEEK_BASED_YEAR, 4, 10, SignStyle.EXCEEDS_PAD).
+      appendLiteral('-').appendValue(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 2).
+      optionalStart.toFormatter()
 
   val InvalidStatus = "Invalid"
   val FixedStatus = "Fixed"
@@ -155,7 +159,7 @@ object Metrics {
   }
 
   val marks: (OffsetDateTime, Int) => Seq[String] = (date, weeks) => {
-    val week = date.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
+    val week = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
     (week to (week - weeks + 1) by -1).map(w => weeksStrFormat.format(date.minusWeeks(week - w))).reverse
   }
 }

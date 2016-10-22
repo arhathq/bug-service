@@ -1,7 +1,7 @@
 package bugapp
 
 import java.time.OffsetDateTime
-import java.time.temporal.WeekFields
+import java.time.temporal.{ChronoUnit, WeekFields}
 
 import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
@@ -38,7 +38,6 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
   Http().bindAndHandle(restService.routes, httpHost, httpPort)
 
   def fromDate(toDate: OffsetDateTime, weeksPeriod: Int): OffsetDateTime = {
-    toDate.minusWeeks(weeksPeriod).`with`(WeekFields.ISO.dayOfWeek(), 1).
-      withHour(0).withMinute(0).withSecond(0).withNano(0)
+    toDate.minusWeeks(weeksPeriod - 1).`with`(WeekFields.ISO.getFirstDayOfWeek).truncatedTo(ChronoUnit.DAYS)
   }
 }

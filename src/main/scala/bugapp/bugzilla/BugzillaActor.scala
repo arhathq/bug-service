@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.nio.file.Paths
 import java.time.{OffsetDateTime, ZoneOffset}
-import java.time.temporal.ChronoField
+import java.time.temporal.IsoFields
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.{HttpMethods, Uri}
@@ -44,7 +44,7 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
 
       val curDate = OffsetDateTime.now.withHour(0).withMinute(0).withSecond(0).withOffsetSameInstant(ZoneOffset.UTC)
       val startDate = BugApp.fromDate(curDate, fetchPeriod)
-      val currentWeek = curDate.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
+      val currentWeek = curDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
       log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$curDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
       loadData(startDate).map { response =>

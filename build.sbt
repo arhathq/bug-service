@@ -33,7 +33,7 @@ libraryDependencies ++= {
     "org.scalaz"             %% "scalaz-core"                       % scalazVersion,
     "org.scalaz"             %% "scalaz-concurrent"                 % scalazVersion,
 
-    "org.apache.xmlgraphics"  % "fop"                               % "2.1",
+    "org.apache.xmlgraphics"  % "fop"                               % "2.1" excludeAll ExclusionRule(organization = "org.apache.xmlgraphics", name = "batik-ext"),
 
     "net.sf.saxon"            % "Saxon-HE"                          % "9.7.0-8",
 
@@ -43,6 +43,6 @@ libraryDependencies ++= {
 
     "org.scala-lang.modules" %% "scala-async"                       % scalaAsyncVersion,
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
-    "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test"   
+    "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test"
   )
 }

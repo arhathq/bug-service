@@ -1,6 +1,6 @@
 package bugapp.report
 
-import java.time.{OffsetDateTime, ZoneOffset}
+import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, Props}
@@ -20,15 +20,23 @@ class SlaReportActor extends Actor with ActorLogging {
   private val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
   private val weekPeriod = 4
-  private val toDate = OffsetDateTime.now.withOffsetSameLocal(ZoneOffset.UTC)
+  private val toDate = OffsetDateTime.now
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, bugs) =>
+      val startDate = BugApp.fromDate(toDate, weekPeriod)
       val marks = Metrics.marks(toDate, weekPeriod)
-      val bugs4weeks = bugs.filter(bugsForPeriod(_, BugApp.fromDate(toDate, weekPeriod)))
+      val bugs4weeks = bugs.filter(bugsForPeriod(_, startDate))
       val outSlaBugs = bugsOutSla(bugs4weeks)
       val p1OutSla = outSlaBugs.getOrElse("P1", Seq())
       val p2OutSla = outSlaBugs.getOrElse("P2", Seq())
+
+      log.debug(s"Start date $startDate (${Metrics.weeksStrFormat.format(startDate)})")
+      log.debug(s"End date $toDate (${Metrics.weeksStrFormat.format(toDate)})")
+      log.debug(s"Week Period $weekPeriod")
+      log.debug(s"Marks: $marks")
+      log.debug(s"Filtered Bugs: $bugs4weeks")
+      log.debug(s"Bugs Out SLA: $outSlaBugs")
 
       val data =
         <sla>

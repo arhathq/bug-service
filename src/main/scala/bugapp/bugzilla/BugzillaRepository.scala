@@ -2,7 +2,6 @@ package bugapp.bugzilla
 
 import java.nio.file.Paths
 import java.time.OffsetDateTime
-import java.time.temporal.ChronoField
 
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
@@ -28,8 +27,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
     getBugs((b: Bug) => {
-      val weekOfYear = ChronoField.ALIGNED_WEEK_OF_YEAR
-      if (b.opened.get(weekOfYear) >= fromDate.get(weekOfYear) && b.opened.getYear >= fromDate.getYear) true else false
+      if (b.opened.isAfter(fromDate)) true else false
     })
   }
 

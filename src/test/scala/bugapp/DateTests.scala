@@ -2,7 +2,7 @@ package bugapp
 
 import java.time._
 import java.time.format.DateTimeFormatter
-import java.time.temporal.{ChronoField, WeekFields}
+import java.time.temporal.{IsoFields, WeekFields}
 
 import org.scalatest.FunSuite
 
@@ -10,11 +10,11 @@ import org.scalatest.FunSuite
   *
   */
 class DateTests extends FunSuite {
-  test("Week of Year for date 01/FEB/2016 should be 5") {
-    val date = OffsetDateTime.of(2016, 2, 1, 0, 0, 0, 0, ZoneOffset.UTC)
-    val week = date.get(ChronoField.ALIGNED_WEEK_OF_YEAR)
+  test("Week of Year for date 01/APR/2016 should be 13") {
+    val date = OffsetDateTime.of(2016, 4, 1, 0, 0, 0, 0, ZoneOffset.UTC)
+    val week = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
 
-    assert(week == 5)
+    assert(week == 13)
   }
 
   test("Period in days between dates 01/OCT/2016 and 05/OCT/2016 should be 4") {

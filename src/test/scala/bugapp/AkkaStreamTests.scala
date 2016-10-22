@@ -37,7 +37,7 @@ class AkkaStreamTests extends FunSuite {
         .runWith(FileIO.toPath(Paths.get("factorials.txt")))
 
   }
-
+/*
   test("File to File streaming") {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
@@ -116,7 +116,8 @@ class AkkaStreamTests extends FunSuite {
 
     println(result2)
   }
-
+*/
+/*
   test("Streaming processed data") {
     implicit val system = ActorSystem()
     implicit val materializer = ActorMaterializer()
@@ -127,7 +128,7 @@ class AkkaStreamTests extends FunSuite {
     val future = source.via(CirceStreamSupport.decode[List[Bug]]).mapConcat(identity).runForeach(println)
     val result = Await.result(future, 5.seconds)
   }
-
+*/
   def fileSource(filename: String): Source[ByteString, Future[IOResult]] = FileIO.fromPath(Paths.get(filename))
   def fileSink(filename: String): Sink[String, Future[IOResult]] = Flow[String].map(s => ByteString(s)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
 

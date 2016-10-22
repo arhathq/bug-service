@@ -12,14 +12,14 @@ class MetricsTests extends FunSuite {
 //  val bugP1 = Bug(40061, "Critical", "P1", "CLOSED", "FIXED", "user@gmail.com", opened,
 //    "user@gmail.com", changed, "Other", "Other", "", "Here is some critical summary", "", None)
 
-  test("P1 bug that resolved in 2 days should pass SLA") {
+  test("P1 bug that resolved in 3 days should pass SLA") {
     val opened = OffsetDateTime.of(2016, 9, 21, 11, 8, 0, 0, ZoneOffset.UTC)
     val changed = OffsetDateTime.of(2016, 9, 23, 12, 42, 14, 0, ZoneOffset.UTC)
     val priority = "P1"
     val (daysOpen, resolvedPeriod, passSla) = Metrics.age(priority, opened, Some(changed))
-    assert(daysOpen == 2)
-    assert(resolvedPeriod == Metrics.ResolvedIn2Days)
-    assert(passSla)
+    assert(daysOpen == 3)
+    assert(resolvedPeriod == Metrics.ResolvedIn6Days)
+    assert(!passSla)
   }
 
   test("P1 bug that resolved more than in 2 days should not pass SLA") {
@@ -49,10 +49,10 @@ class MetricsTests extends FunSuite {
   test("Marks weeks for September") {
     val startDate = OffsetDateTime.of(2016, 9, 30, 0, 0, 0, 0, ZoneOffset.UTC)
     val marks = Metrics.marks(startDate, 4)
+    assert(marks.contains("2016-36"))
     assert(marks.contains("2016-37"))
     assert(marks.contains("2016-38"))
     assert(marks.contains("2016-39"))
-    assert(marks.contains("2016-40"))
   }
 
   test("Bugs splitting") {
