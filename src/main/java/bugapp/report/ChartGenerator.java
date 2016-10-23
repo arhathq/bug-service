@@ -27,6 +27,26 @@ public class ChartGenerator {
 
     private static final String imageFormat = ImageFormat.JPEG;
 
+
+    public static String generateBase64OutSlaBugs(CategoryDataset dataset) throws Exception {
+        JFreeChart chart = ChartFactory.createBarChart(
+                "Production, Bugs out SLA, P1/P2 by Week",
+                "", "Bug Count",
+                dataset, PlotOrientation.VERTICAL,
+                true, true, false
+        );
+
+        CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, Color.red);
+        renderer.setSeriesPaint(1, Color.blue);
+        renderer.setMaximumBarWidth(3.0);
+        renderer.setItemMargin(0.0);
+
+        return toBase64(chartToBytes(640, 480, chart));
+    }
+
+
     /*
         <P1>
             <2015-38>1</2015-38>
@@ -39,7 +59,7 @@ public class ChartGenerator {
             <2015-40>8</2015-40>
         </P2>
     */
-    public String generateBase64OpenHighPriorityBugs(CategoryDataset dataset) throws Exception {
+    public static String generateBase64OpenHighPriorityBugs(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createStackedBarChart3D(
                 "Production, Open, P1/P2 by Week",
                 "", "Bug Count",
@@ -154,12 +174,12 @@ public class ChartGenerator {
         ChartUtilities.saveChartAsJPEG(file, chart, width, height);
     }
 
-    private byte[] chartToBytes(int width, int height, JFreeChart chart) throws Exception {
+    private static byte[] chartToBytes(int width, int height, JFreeChart chart) throws Exception {
         BufferedImage image = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_RGB, null);
         return EncoderUtil.encode(image, imageFormat);
     }
 
-    private String toBase64(byte[] bytes) throws Exception {
+    private static String toBase64(byte[] bytes) throws Exception {
         return Base64.encodeBase64String(bytes);
     }
 
@@ -184,7 +204,7 @@ public class ChartGenerator {
         openHighPriorityBugs.addValue(2.0, p2, week2);
         openHighPriorityBugs.addValue(8.0, p2, week3);
 
-        System.out.println(chartGenerator.generateBase64OpenHighPriorityBugs(openHighPriorityBugs));
+        System.out.println(generateBase64OpenHighPriorityBugs(openHighPriorityBugs));
 
         String open = "Open";
         String closed = "Closed";

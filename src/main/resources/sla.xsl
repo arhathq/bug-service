@@ -50,9 +50,9 @@
             P1: <xsl:value-of select="p1-bugs"/>  P2: <xsl:value-of select="p2-bugs"/>
         </fo:block>
         <xsl:apply-templates select="list"/>
-        <!--<fo:block text-align="center">-->
-            <!--<fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>-->
-        <!--</fo:block>-->
+        <fo:block text-align="center">
+            <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
+        </fo:block>
     </xsl:template>
 
     <xsl:template match="list[bug]">
@@ -140,6 +140,12 @@
                         <fo:block text-align="left">Week</fo:block>
                     </fo:table-cell>
                     <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
+                        <fo:block>SLA, %</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
+                        <fo:block>SLA</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
                         <fo:block>Out SLA</fo:block>
                     </fo:table-cell>
                     <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
@@ -160,6 +166,12 @@
                 <fo:table-header background-color="#ddebf7" font-weight="bold" border-bottom="solid .5px #9cc2e5" text-align="right">
                     <fo:table-cell width="5cm" padding-left=".5em" padding-top=".5em">
                         <fo:block text-align="left">Week</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
+                        <fo:block>SLA, %</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
+                        <fo:block>SLA</fo:block>
                     </fo:table-cell>
                     <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
                         <fo:block>Out SLA</fo:block>
@@ -189,7 +201,17 @@
             </fo:table-cell>
             <fo:table-cell padding-right=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="count"/>
+                    <xsl:value-of select="slaPercentage"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="slaCount"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="outSlaCount"/>
                 </fo:block>
             </fo:table-cell>
             <fo:table-cell padding-right=".5em" padding-top=".5em">
