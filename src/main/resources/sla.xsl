@@ -24,6 +24,7 @@
                 <fo:flow flow-name="xsl-region-body">
                     <xsl:apply-templates select="sla/p1-sla"/>
                     <xsl:apply-templates select="sla/p2-sla"/>
+                    <xsl:apply-templates select="sla/sla-chart"/>
                     <fo:block id='end'/>
                 </fo:flow>
             </fo:page-sequence>
@@ -80,7 +81,14 @@
             </xsl:if>
             <fo:table-cell border="solid .5px black" text-align="left" padding-left=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="priority"/>
+                    <xsl:choose>
+                        <xsl:when test="priority = 'Grand Total'"><xsl:value-of select="priority"/></xsl:when>
+                        <xsl:otherwise>
+                            <fo:basic-link external-destination="url('{link}')" color="blue" text-decoration="underline">
+                                <xsl:value-of select="priority"/>
+                            </fo:basic-link>
+                        </xsl:otherwise>
+                    </xsl:choose>
                 </fo:block>
             </fo:table-cell>
             <fo:table-cell border="solid .5px black" text-align="right" padding-right=".5em" padding-top=".5em">
@@ -153,7 +161,9 @@
         <fo:table-row>
             <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="id"/>
+                    <fo:basic-link external-destination="url('{link}')" color="blue" text-decoration="underline">
+                        <xsl:value-of select="id"/>
+                    </fo:basic-link>
                 </fo:block>
             </fo:table-cell>
             <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
@@ -282,5 +292,12 @@
             </fo:table-cell>
         </fo:table-row>
     </xsl:template>
+
+    <xsl:template match="sla/sla-chart">
+        <fo:block space-before="3em" text-align="center">
+            <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
+        </fo:block>
+    </xsl:template>
+
 
 </xsl:stylesheet>

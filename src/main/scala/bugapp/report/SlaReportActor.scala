@@ -9,6 +9,7 @@ import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
+import org.jfree.data.time.{TimeSeries, TimeSeriesCollection, Week}
 
 import scala.xml._
 
@@ -22,6 +23,7 @@ class SlaReportActor extends Actor with ActorLogging {
 
   private val weekPeriod = 4
   private val toDate = BugApp.toDate
+  private val bugzillaUri = BugApp.bugzillaUrl
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, bugs) =>
@@ -51,7 +53,7 @@ class SlaReportActor extends Actor with ActorLogging {
           <sla-chart>
             <image>
               <content-type>image/jpeg</content-type>
-              <content-value></content-value>
+              <content-value>{slaAchievementTrendChart(marks, actualBugs)}</content-value>
             </image>
           </sla-chart>
         </sla>
@@ -62,9 +64,6 @@ class SlaReportActor extends Actor with ActorLogging {
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String]): Elem = {
     val p1 = bugs.getOrElse(Metrics.P1Priority, Seq())
     val p2 = bugs.getOrElse(Metrics.P2Priority, Seq())
-
-    val idsP1 = p1.collect({case b: Bug => b.id}).mkString(",")
-    val idsP2 = p2.collect({case b: Bug => b.id}).mkString(",")
 
     <out-sla-bugs>
       <table>
@@ -88,12 +87,14 @@ class SlaReportActor extends Actor with ActorLogging {
     val opened = grouped.getOrElse(Metrics.OpenStatus, Seq()).length
     val fixed = grouped.getOrElse(Metrics.FixedStatus, Seq()).length
     val invalid = grouped.getOrElse(Metrics.InvalidStatus, Seq()).length
+    val ids = bugs.collect({case b: Bug => b.id}).mkString(",")
     <record>
       <priority>{priority}</priority>
       <fixed>{fixed}</fixed>
       <invalid>{invalid}</invalid>
       <opened>{opened}</opened>
       <total>{fixed + opened + invalid}</total>
+      <link>{s"$bugzillaUri/buglist.cgi?bug_id=$ids"}</link>
     </record>
   }
 
@@ -112,8 +113,29 @@ class SlaReportActor extends Actor with ActorLogging {
         <daysOpen>{bug.stats.daysOpen}</daysOpen>
         <reopenedCount>{bug.stats.reopenCount}</reopenedCount>
         <summary>{PCData(bug.summary)}</summary>
+        <link>{s"$bugzillaUri/show_bug.cgi?id=${bug.id}"}</link>
       </bug>
     }
+  }
+
+  def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): TimeSeries = {
+    val timeSeries = new TimeSeries(priority, classOf[Week])
+    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
+    marks.map { mark =>
+      val markParts = mark.split("-")
+      grouped.get(mark) match {
+        case Some(v) => (slaPercentage(v.count(_.stats.passSla), v.length), markParts(0).toInt, markParts(1).toInt)
+        case None => (0.0, markParts(0).toInt, markParts(1).toInt)
+      }
+    }.foreach(v => timeSeries.add(new Week(v._3, v._2), v._1))
+    timeSeries
+  }
+
+  def slaAchievementTrendChart(marks:Seq[String], bugs: Seq[Bug]): String = {
+    val dataSet = new TimeSeriesCollection()
+    dataSet.addSeries(slaAchievementTrendChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)))
+    dataSet.addSeries(slaAchievementTrendChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)))
+    ChartGenerator.generateBase64SlaAchievementTrend(dataSet)
   }
 
   def outSlaChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Int, String, String)] = {
@@ -178,10 +200,12 @@ object SlaReportActor {
     <week-period>
       <priority>{priority}</priority>
       <week>{mark}</week>
-      <slaPercentage>{((totalCount - outSlaCount) * 100 / totalCount).toDouble}</slaPercentage>
+      <slaPercentage>{slaPercentage(totalCount - outSlaCount, totalCount)}</slaPercentage>
       <slaCount>{totalCount - outSlaCount}</slaCount>
       <outSlaCount>{outSlaCount}</outSlaCount>
       <totalCount>{totalCount}</totalCount>
     </week-period>
   }
+
+  val slaPercentage: (Int, Int) => Double = (count, totalCount) => (count * 100 / totalCount).toDouble
 }
