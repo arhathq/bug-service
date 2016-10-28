@@ -44,11 +44,72 @@
         </fo:static-content>
     </xsl:template>
 
-    <xsl:template match="out-sla-bugs">
-        <fo:block font-size="12pt" font-weight="bold" space-after="5mm">P1/P2 out of SLA</fo:block>
-        <fo:block font-size="10pt">
-            P1: <xsl:value-of select="p1-bugs"/>  P2: <xsl:value-of select="p2-bugs"/>
+    <xsl:template match="table">
+        <fo:block font-size="10pt" space-after=".5cm" space-before=".5cm" margin-left="0">
+            <fo:table width="100%" border-collapse="collapse">
+                <fo:table-header font-weight="bold" text-align="justify">
+                    <fo:table-cell border="solid .5px black" padding=".5em" padding-left=".5em" padding-right=".5em" width="4cm">
+                        <fo:block>Priority</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" text-align="right" padding=".5em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Fixed</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" text-align="right" padding=".5em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Invalid</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" text-align="right" padding=".5em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Opened</fo:block>
+                    </fo:table-cell>
+                    <fo:table-cell border="solid .5px black" text-align="right" padding=".5em" padding-left=".5em" padding-right=".5em" width="2cm">
+                        <fo:block>Total</fo:block>
+                    </fo:table-cell>
+                </fo:table-header>
+                <fo:table-body>
+                    <xsl:apply-templates select="record"/>
+                </fo:table-body>
+            </fo:table>
         </fo:block>
+    </xsl:template>
+
+    <xsl:template match="table/record">
+        <fo:table-row>
+            <xsl:if test="priority = 'Grand Total'">
+                <xsl:attribute name="font-weight">bold</xsl:attribute>
+                <xsl:attribute name="background-color">#ddebf7</xsl:attribute>
+                <xsl:attribute name="border-top">solid .5px black</xsl:attribute>
+            </xsl:if>
+            <fo:table-cell border="solid .5px black" text-align="left" padding-left=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="priority"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" text-align="right" padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="fixed"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" text-align="right" padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="invalid"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" text-align="right" padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="opened"/>
+                </fo:block>
+            </fo:table-cell>
+            <fo:table-cell border="solid .5px black" text-align="right" padding-right=".5em" padding-top=".5em">
+                <fo:block>
+                    <xsl:value-of select="total"/>
+                </fo:block>
+            </fo:table-cell>
+        </fo:table-row>
+    </xsl:template>
+
+    <xsl:template match="out-sla-bugs">
+        <fo:block font-size="12pt" font-weight="bold" space-after=".5em">P1/P2 out of SLA during last 4 weeks</fo:block>
+        <xsl:apply-templates select="table"/>
+        <fo:block font-size="12pt" font-weight="bold" space-before="3em" space-after=".5em">Out of SLA list</fo:block>
         <xsl:apply-templates select="list"/>
         <fo:block text-align="center">
             <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
@@ -125,7 +186,7 @@
             </fo:table-cell>
             <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="summary"/>
+                    <xsl:value-of select="summary" />
                 </fo:block>
             </fo:table-cell>
         </fo:table-row>

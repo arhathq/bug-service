@@ -10,7 +10,7 @@ import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
-import scala.xml.{Elem, Group, Null, TopScope}
+import scala.xml._
 
 /**
   *
@@ -29,8 +29,8 @@ class SlaReportActor extends Actor with ActorLogging {
       val marks = Metrics.marks(toDate, weekPeriod)
       val actualBugs = bugs.filter(bugsForPeriod(_, startDate))
       val outSlaBugs = bugsOutSla(actualBugs)
-      val p1OutSla = outSlaBugs.getOrElse("P1", Seq())
-      val p2OutSla = outSlaBugs.getOrElse("P2", Seq())
+      val p1OutSla = outSlaBugs.getOrElse(Metrics.P1Priority, Seq())
+      val p2OutSla = outSlaBugs.getOrElse(Metrics.P2Priority, Seq())
 
       log.debug(s"Start date $startDate (${Metrics.weeksStrFormat.format(startDate)})")
       log.debug(s"End date $toDate (${Metrics.weeksStrFormat.format(toDate)})")
@@ -43,38 +43,35 @@ class SlaReportActor extends Actor with ActorLogging {
         <sla>
           {bugsOutSlaElem(outSlaBugs, marks)}
           <p1-sla>
-            {sla("P1", marks, p1OutSla, actualBugs.filter(_.priority == "P1"))}
-            <image>
-              <content-type>image/jpeg</content-type>
-              <content-value></content-value>
-            </image>
+            {sla(Metrics.P1Priority, marks, p1OutSla, actualBugs.filter(_.priority == Metrics.P1Priority))}
           </p1-sla>
           <p2-sla>
-            {sla("P2", marks, p2OutSla, actualBugs.filter(_.priority == "P2"))}
+            {sla(Metrics.P2Priority, marks, p2OutSla, actualBugs.filter(_.priority == Metrics.P2Priority))}
+          </p2-sla>
+          <sla-chart>
             <image>
               <content-type>image/jpeg</content-type>
               <content-value></content-value>
             </image>
-          </p2-sla>
+          </sla-chart>
         </sla>
 
       context.parent ! ReportDataResponse(reportId, data)
   }
 
-
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String]): Elem = {
-    val p1 = bugs.getOrElse("P1", Seq())
-    val p2 = bugs.getOrElse("P2", Seq())
-
-    val numOfP1 = p1.length
-    val numOfP2 = p2.length
+    val p1 = bugs.getOrElse(Metrics.P1Priority, Seq())
+    val p2 = bugs.getOrElse(Metrics.P2Priority, Seq())
 
     val idsP1 = p1.collect({case b: Bug => b.id}).mkString(",")
     val idsP2 = p2.collect({case b: Bug => b.id}).mkString(",")
 
     <out-sla-bugs>
-      <p1-bugs>{numOfP1}</p1-bugs>
-      <p2-bugs>{numOfP2}</p2-bugs>
+      <table>
+        {outSlaTableElem(Metrics.P1Priority, p1)}
+        {outSlaTableElem(Metrics.P2Priority, p2)}
+        {outSlaTableElem("Grand Total", p1 ++ p2)}
+      </table>
       <list>
         {bugListElem(p1)}
         {bugListElem(p2)}
@@ -84,6 +81,20 @@ class SlaReportActor extends Actor with ActorLogging {
         <content-value>{outSlaChart(marks, p1 ++ p2)}</content-value>
       </image>
     </out-sla-bugs>
+  }
+
+  def outSlaTableElem(priority: String, bugs: Seq[Bug]): Elem = {
+    val grouped = bugs.groupBy(_.stats.status)
+    val opened = grouped.getOrElse(Metrics.OpenStatus, Seq()).length
+    val fixed = grouped.getOrElse(Metrics.FixedStatus, Seq()).length
+    val invalid = grouped.getOrElse(Metrics.InvalidStatus, Seq()).length
+    <record>
+      <priority>{priority}</priority>
+      <fixed>{fixed}</fixed>
+      <invalid>{invalid}</invalid>
+      <opened>{opened}</opened>
+      <total>{fixed + opened + invalid}</total>
+    </record>
   }
 
   def bugListElem(bugs: Seq[Bug]): Seq[Elem] = {
@@ -100,7 +111,7 @@ class SlaReportActor extends Actor with ActorLogging {
           }</resolved>
         <daysOpen>{bug.stats.daysOpen}</daysOpen>
         <reopenedCount>{bug.stats.reopenCount}</reopenedCount>
-        <summary>{bug.summary}</summary>
+        <summary>{PCData(bug.summary)}</summary>
       </bug>
     }
   }
@@ -117,8 +128,8 @@ class SlaReportActor extends Actor with ActorLogging {
 
   def outSlaChart(marks:Seq[String], bugs: Seq[Bug]): String = {
     val dataSet = new DefaultCategoryDataset()
-    outSlaChartData("P1", marks, bugs.filter(_.priority == "P1")).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
-    outSlaChartData("P2", marks, bugs.filter(_.priority == "P2")).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
+    outSlaChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
+    outSlaChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
     ChartGenerator.generateBase64OutSlaBugs(dataSet)
   }
 
@@ -145,8 +156,8 @@ object SlaReportActor {
 
   val bugsForPeriod: (Bug, OffsetDateTime) => Boolean = (bug, startDate) => {
     bug.priority match {
-      case "P1" if bug.opened.isAfter(startDate) => true
-      case "P2" if bug.opened.isAfter(startDate) => true
+      case Metrics.P1Priority if bug.opened.isAfter(startDate) => true
+      case Metrics.P2Priority if bug.opened.isAfter(startDate) => true
       case _ => false
     }
   }
@@ -157,8 +168,8 @@ object SlaReportActor {
 
   val bugsOutSla: (Seq[Bug]) => Map[String, Seq[Bug]] = bugs => {
     bugs.groupBy(bug => bug.stats match {
-      case stats if !stats.passSla && bug.priority == "P1" => "P1"
-      case stats if !stats.passSla && bug.priority == "P2" => "P2"
+      case stats if !stats.passSla && bug.priority == Metrics.P1Priority => Metrics.P1Priority
+      case stats if !stats.passSla && bug.priority == Metrics.P2Priority => Metrics.P2Priority
       case _ => "sla"
     })
   }

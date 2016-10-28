@@ -76,6 +76,11 @@ object Metrics {
       appendLiteral('-').appendValue(IsoFields.WEEK_OF_WEEK_BASED_YEAR, 2).
       optionalStart.toFormatter()
 
+  val P1Priority = "P1"
+  val P2Priority = "P2"
+  val P3Priority = "P3"
+  val NPPriority = "NP"
+
   val InvalidStatus = "Invalid"
   val FixedStatus = "Fixed"
   val OpenStatus = "Open"
