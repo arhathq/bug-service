@@ -27,7 +27,7 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
     path("bugs" / IntNumber ) { weeks =>
       get {
         extractRequest { req =>
-          val startDate = BugApp.fromDate(OffsetDateTime.now, weeks)
+          val startDate = BugApp.fromDate(BugApp.toDate, weeks)
           sendResponse(bugRepository.getBugs(startDate))
         }
       }
@@ -35,8 +35,8 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
     path("report" / Segment / "weeks" / IntNumber) { (reportType, weeks) =>
       get {
         extractRequest { req =>
-          val endDate = OffsetDateTime.now
-          val startDate = BugApp.fromDate(OffsetDateTime.now, weeks)
+          val endDate = BugApp.toDate
+          val startDate = BugApp.fromDate(endDate, weeks)
           sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate)).mapTo[ReportResult])
         }
       }

@@ -1,8 +1,7 @@
 package bugapp.report
 
-import java.time.OffsetDateTime
-
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
+import bugapp.BugApp
 import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 
@@ -59,7 +58,7 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
     <bug-reports>
       <report-header>
-        <date>{OffsetDateTime.now}</date>
+        <date>{BugApp.toDate}</date>
       </report-header>
       {reportData}
     </bug-reports>

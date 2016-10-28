@@ -21,7 +21,7 @@ class SlaReportActor extends Actor with ActorLogging {
   private val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
   private val weekPeriod = 4
-  private val toDate = OffsetDateTime.now
+  private val toDate = BugApp.toDate
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, bugs) =>

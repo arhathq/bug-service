@@ -5,8 +5,8 @@ version := "1.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= {
-  val akkaVersion         = "2.4.5"
-  val circeVersion        = "0.5.2"
+  val akkaVersion         = "2.4.11"
+  val circeVersion        = "0.5.4"
   val scalaTestVersion    = "2.2.6"
   val scalaAsyncVersion   = "0.9.5"
   val scalaXmlVersion     = "1.0.4"

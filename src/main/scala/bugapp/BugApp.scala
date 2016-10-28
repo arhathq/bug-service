@@ -37,6 +37,8 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   Http().bindAndHandle(restService.routes, httpHost, httpPort)
 
+  def toDate: OffsetDateTime = OffsetDateTime.now
+
   def fromDate(toDate: OffsetDateTime, weeksPeriod: Int): OffsetDateTime = {
     toDate.minusWeeks(weeksPeriod - 1).`with`(WeekFields.ISO.getFirstDayOfWeek).truncatedTo(ChronoUnit.DAYS)
   }

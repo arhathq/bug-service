@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.nio.file.Paths
-import java.time.{OffsetDateTime, ZoneOffset}
+import java.time.OffsetDateTime
 import java.time.temporal.IsoFields
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -38,17 +38,17 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
   override def receive: Receive = process()
 
   def process(): Receive = {
-    case GetData() =>
+    case GetData =>
 
       if (!senders.contains(sender())) senders.add(sender)
 
-      val curDate = OffsetDateTime.now.withHour(0).withMinute(0).withSecond(0).withOffsetSameInstant(ZoneOffset.UTC)
-      val startDate = BugApp.fromDate(curDate, fetchPeriod)
-      val currentWeek = curDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-      log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$curDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
+      val endDate = BugApp.toDate
+      val startDate = BugApp.fromDate(endDate, fetchPeriod)
+      val currentWeek = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+      log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$endDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
       loadData(startDate).map { response =>
-        val dataPath = UtilsIO.bugzillaDataPath(rootPath, curDate)
+        val dataPath = UtilsIO.bugzillaDataPath(rootPath, endDate)
         val rawPath = s"$dataPath/bugs_origin.json"
         UtilsIO.createDirectoryIfNotExists(dataPath)
         UtilsIO.write(rawPath, response)
@@ -105,7 +105,7 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
     stream.run().map(_.flatten)
   }
 
-  def transformBugs(parallel: Int)(implicit ec: ExecutionContext) = {
+  private def transformBugs(parallel: Int)(implicit ec: ExecutionContext) = {
     Flow[Seq[BugzillaBug]].mapAsync(parallel) {bugs =>
       val ids = bugs.map(_.id)
       val future = loadHistories(ids)
@@ -119,18 +119,18 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       }
     }.collect { case bugs: List[Bug] => bugs }
   }
-
-  def fileSource(filename: String): Source[ByteString, Future[IOResult]] = FileIO.fromPath(Paths.get(filename))
-  def fileSink(filename: String): Sink[String, Future[IOResult]] =
-    Flow[String].map(s => ByteString(s)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
-
 }
 
 object BugzillaActor {
-  case class GetData()
+  case object GetData
   case class DataReady(path: String)
 
   def props(httpClient: HttpClient) = Props(classOf[BugzillaActor], httpClient)
+
+  private def fileSource(filename: String): Source[ByteString, Future[IOResult]] = FileIO.fromPath(Paths.get(filename))
+
+  private def fileSink(filename: String): Sink[String, Future[IOResult]] =
+    Flow[String].map(s => ByteString(s)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
 
   private def uri(bugzillaUrl: String, request: BugzillaRequest): Uri = {
     Uri(bugzillaUrl).
