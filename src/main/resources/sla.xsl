@@ -5,14 +5,16 @@
     <xsl:template match="bug-reports">
         <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
             <fo:layout-master-set>
-                <fo:simple-page-master master-name="simpleA4" page-height="29.7cm" page-width="21cm" margin-top="2cm" margin-bottom="1cm" margin-left="1.5cm" margin-right=".5cm">
-                    <fo:region-body region-name="xsl-region-body" margin="0.5cm" margin-top="3cm"/>
-                    <fo:region-before region-name="xsl-region-before" margin="0.5cm" extent="3cm" display-align="before" />
+                <fo:simple-page-master master-name="simpleA4" page-height="29.7cm" page-width="21cm" margin-top="1cm" margin-bottom="1cm" margin-left="1.5cm" margin-right=".5cm">
+                    <fo:region-body region-name="xsl-region-body" margin=".5cm" margin-top="3cm"/>
+                    <fo:region-before region-name="xsl-region-before" margin=".5cm" display-align="before" extent="3cm"/>
+                    <fo:region-after region-name="xsl-region-after" margin=".5cm" display-align="after" extent="3cm"/>
                 </fo:simple-page-master>
             </fo:layout-master-set>
 
             <fo:page-sequence master-reference="simpleA4">
                 <xsl:apply-templates select="report-header"/>
+                <xsl:apply-templates select="report-footer"/>
                 <fo:flow flow-name="xsl-region-body">
                     <fo:block/>
                     <xsl:apply-templates select="sla/out-sla-bugs"/>
@@ -21,6 +23,7 @@
 
             <fo:page-sequence master-reference="simpleA4">
                 <xsl:apply-templates select="report-header"/>
+                <xsl:apply-templates select="report-footer"/>
                 <fo:flow flow-name="xsl-region-body">
                     <xsl:apply-templates select="sla/p1-sla"/>
                     <xsl:apply-templates select="sla/p2-sla"/>
@@ -28,7 +31,6 @@
                     <fo:block id='end'/>
                 </fo:flow>
             </fo:page-sequence>
-
         </fo:root>
     </xsl:template>
 
@@ -41,6 +43,14 @@
                 <fo:block text-align="outside">
                     Page <fo:page-number font-style="normal" /> of <fo:page-number-citation ref-id='end'/>
                 </fo:block>
+            </fo:block>
+        </fo:static-content>
+    </xsl:template>
+
+    <xsl:template match="report-footer">
+        <fo:static-content flow-name="xsl-region-after">
+            <fo:block font-size="8pt" font-style="italic" text-align="center" space-after="5mm" color="black">
+                <fo:block><xsl:value-of select="note"/></fo:block>
             </fo:block>
         </fo:static-content>
     </xsl:template>

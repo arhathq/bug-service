@@ -118,23 +118,20 @@ class SlaReportActor extends Actor with ActorLogging {
     }
   }
 
-  def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): TimeSeries = {
-    val timeSeries = new TimeSeries(priority, classOf[Week])
+  def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Double, String, String)] = {
     val grouped = bugs.groupBy(bug => bug.stats.openMonth)
     marks.map { mark =>
-      val markParts = mark.split("-")
       grouped.get(mark) match {
-        case Some(v) => (slaPercentage(v.count(_.stats.passSla), v.length), markParts(0).toInt, markParts(1).toInt)
-        case None => (0.0, markParts(0).toInt, markParts(1).toInt)
+        case Some(v) => (slaPercentage(v.count(_.stats.passSla), v.length), priority, mark)
+        case None => (0.0, priority, mark)
       }
-    }.foreach(v => timeSeries.add(new Week(v._3, v._2), v._1))
-    timeSeries
+    }
   }
 
   def slaAchievementTrendChart(marks:Seq[String], bugs: Seq[Bug]): String = {
-    val dataSet = new TimeSeriesCollection()
-    dataSet.addSeries(slaAchievementTrendChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)))
-    dataSet.addSeries(slaAchievementTrendChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)))
+    val dataSet = new DefaultCategoryDataset()
+    slaAchievementTrendChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)).foreach {v => dataSet.addValue(v._1, v._2, v._3)}
+    slaAchievementTrendChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)).foreach {v => dataSet.addValue(v._1, v._2, v._3)}
     ChartGenerator.generateBase64SlaAchievementTrend(dataSet)
   }
 
@@ -207,5 +204,5 @@ object SlaReportActor {
     </week-period>
   }
 
-  val slaPercentage: (Int, Int) => Double = (count, totalCount) => (count * 100 / totalCount).toDouble
+  val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 0.0 else (count * 100 / totalCount).toDouble
 }

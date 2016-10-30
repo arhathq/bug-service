@@ -61,6 +61,9 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
         <date>{BugApp.toDate}</date>
       </report-header>
       {reportData}
+      <report-footer>
+        <note>* Bugs "CRF Hot Deploy - Prod DB", "Ecomm Deploy - Prod DB", "Dataload Failed", "New Files Arrived", "Data Consistency" excluded from report</note>
+      </report-footer>
     </bug-reports>
   }
 }

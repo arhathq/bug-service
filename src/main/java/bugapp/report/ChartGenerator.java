@@ -4,27 +4,23 @@ import org.apache.commons.codec.binary.Base64;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
-import org.jfree.chart.axis.DateAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.encoders.EncoderUtil;
 import org.jfree.chart.encoders.ImageFormat;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.plot.XYPlot;
 import org.jfree.chart.renderer.AreaRendererEndType;
 import org.jfree.chart.renderer.category.AreaRenderer;
 import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.xy.XYItemRenderer;
-import org.jfree.chart.renderer.xy.XYLineAndShapeRenderer;
+import org.jfree.chart.renderer.category.CategoryItemRenderer;
+import org.jfree.chart.renderer.category.LineAndShapeRenderer;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
-import org.jfree.data.time.TimeSeriesCollection;
 import org.jfree.ui.RectangleInsets;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.text.SimpleDateFormat;
 import java.util.Arrays;
 import java.util.List;
 
@@ -55,19 +51,20 @@ public class ChartGenerator {
         return toBase64(chartToBytes(640, 480, chart));
     }
 
-    public static String generateBase64SlaAchievementTrend(TimeSeriesCollection dataset) throws Exception {
-        JFreeChart chart = ChartFactory.createTimeSeriesChart(
+    public static String generateBase64SlaAchievementTrend(CategoryDataset dataset) throws Exception {
+        JFreeChart chart = ChartFactory.createLineChart(
                 "P1/P2 SLA % achievement trend",  // title
                 "Year week",             // x-axis label
                 "%",                // y-axis label
                 dataset,            // data
+                PlotOrientation.VERTICAL,
                 true,               // create legend?
                 true,               // generate tooltips?
                 false               // generate URLs?
         );
 
         chart.setBackgroundPaint(Color.white);
-        XYPlot plot = (XYPlot) chart.getPlot();
+        CategoryPlot plot = (CategoryPlot) chart.getPlot();
         plot.setBackgroundPaint(Color.lightGray);
         plot.setDomainGridlinePaint(Color.white);
         plot.setRangeGridlinePaint(Color.white);
@@ -75,15 +72,14 @@ public class ChartGenerator {
         plot.setDomainCrosshairVisible(true);
         plot.setRangeCrosshairVisible(true);
 
-        XYItemRenderer r = plot.getRenderer();
-        if (r instanceof XYLineAndShapeRenderer) {
-            XYLineAndShapeRenderer renderer = (XYLineAndShapeRenderer) r;
+        CategoryItemRenderer r = plot.getRenderer();
+        if (r instanceof LineAndShapeRenderer) {
+            LineAndShapeRenderer renderer = (LineAndShapeRenderer) r;
+            renderer.setDrawOutlines(true);
+            renderer.setUseFillPaint(true);
             renderer.setBaseShapesVisible(true);
             renderer.setBaseShapesFilled(true);
         }
-
-        DateAxis axis = (DateAxis) plot.getDomainAxis();
-        axis.setDateFormatOverride(new SimpleDateFormat("yyyy-ww"));
 
         return toBase64(chartToBytes(640, 480, chart));
     }
