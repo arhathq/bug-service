@@ -9,7 +9,6 @@ import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
-import org.jfree.data.time.{TimeSeries, TimeSeriesCollection, Week}
 
 import scala.xml._
 
@@ -64,12 +63,13 @@ class SlaReportActor extends Actor with ActorLogging {
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String]): Elem = {
     val p1 = bugs.getOrElse(Metrics.P1Priority, Seq())
     val p2 = bugs.getOrElse(Metrics.P2Priority, Seq())
+    val p1p2 = p1 ++ p2
 
     <out-sla-bugs>
       <table>
         {outSlaTableElem(Metrics.P1Priority, p1)}
         {outSlaTableElem(Metrics.P2Priority, p2)}
-        {outSlaTableElem("Grand Total", p1 ++ p2)}
+        {outSlaTableElem("Grand Total", p1p2)}
       </table>
       <list>
         {bugListElem(p1)}
@@ -77,7 +77,7 @@ class SlaReportActor extends Actor with ActorLogging {
       </list>
       <image>
         <content-type>image/jpeg</content-type>
-        <content-value>{outSlaChart(marks, p1 ++ p2)}</content-value>
+        <content-value>{outSlaChart(marks, p1p2)}</content-value>
       </image>
     </out-sla-bugs>
   }
@@ -123,7 +123,7 @@ class SlaReportActor extends Actor with ActorLogging {
     marks.map { mark =>
       grouped.get(mark) match {
         case Some(v) => (slaPercentage(v.count(_.stats.passSla), v.length), priority, mark)
-        case None => (0.0, priority, mark)
+        case None => (100.0, priority, mark)
       }
     }
   }
@@ -193,6 +193,8 @@ object SlaReportActor {
     })
   }
 
+  val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 100.0 else (count * 100 / totalCount).toDouble
+
   val weekPeriodElem: (String, String, Int, Int) => Elem = (priority, mark, outSlaCount, totalCount) => {
     <week-period>
       <priority>{priority}</priority>
@@ -203,6 +205,4 @@ object SlaReportActor {
       <totalCount>{totalCount}</totalCount>
     </week-period>
   }
-
-  val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 0.0 else (count * 100 / totalCount).toDouble
 }

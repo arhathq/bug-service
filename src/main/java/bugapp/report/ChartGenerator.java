@@ -1,22 +1,24 @@
 package bugapp.report;
 
 import org.apache.commons.codec.binary.Base64;
+import org.jfree.chart.ChartColor;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.encoders.EncoderUtil;
 import org.jfree.chart.encoders.ImageFormat;
+import org.jfree.chart.labels.ItemLabelAnchor;
+import org.jfree.chart.labels.ItemLabelPosition;
+import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.AreaRendererEndType;
-import org.jfree.chart.renderer.category.AreaRenderer;
-import org.jfree.chart.renderer.category.BarRenderer;
-import org.jfree.chart.renderer.category.CategoryItemRenderer;
-import org.jfree.chart.renderer.category.LineAndShapeRenderer;
+import org.jfree.chart.renderer.category.*;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.RectangleInsets;
+import org.jfree.ui.TextAnchor;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -35,7 +37,7 @@ public class ChartGenerator {
     public static String generateBase64OutSlaBugs(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createBarChart(
                 "Production, Bugs out SLA, P1/P2 by Week",
-                "", "Bug Count",
+                "Week Year", "Bug Count",
                 dataset, PlotOrientation.VERTICAL,
                 true, true, false
         );
@@ -43,10 +45,24 @@ public class ChartGenerator {
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
         plot.getRangeAxis().setStandardTickUnits(NumberAxis.createIntegerTickUnits());
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, Color.red);
-        renderer.setSeriesPaint(1, Color.blue);
+        renderer.setSeriesPaint(0, ChartColor.VERY_LIGHT_RED);
+        renderer.setSeriesPaint(1, ChartColor.VERY_LIGHT_BLUE);
         renderer.setMaximumBarWidth(3.0);
         renderer.setItemMargin(0.0);
+
+        renderer.setBarPainter(new StandardBarPainter());
+
+        renderer.setBaseItemLabelsVisible(true);
+        renderer.setBaseItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+
+        renderer.setSeriesItemLabelFont(0, new java.awt.Font("SansSerif", Font.BOLD, 14));
+        renderer.setSeriesItemLabelFont(1, new java.awt.Font("SansSerif", Font.BOLD, 14));
+
+        renderer.setSeriesItemLabelPaint(0, Color.black);
+        renderer.setSeriesItemLabelPaint(1, Color.black);
+
+        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
+        renderer.setSeriesPositiveItemLabelPosition(1, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
 
         return toBase64(chartToBytes(640, 480, chart));
     }
@@ -55,7 +71,7 @@ public class ChartGenerator {
         JFreeChart chart = ChartFactory.createLineChart(
                 "P1/P2 SLA % achievement trend",  // title
                 "Year week",             // x-axis label
-                "%",                // y-axis label
+                "SLA, %",                // y-axis label
                 dataset,            // data
                 PlotOrientation.VERTICAL,
                 true,               // create legend?
@@ -79,6 +95,9 @@ public class ChartGenerator {
             renderer.setUseFillPaint(true);
             renderer.setBaseShapesVisible(true);
             renderer.setBaseShapesFilled(true);
+            renderer.setBaseItemLabelsVisible(true);
+            renderer.setSeriesItemLabelPaint(0, Color.red);
+            renderer.setSeriesItemLabelPaint(1, Color.blue);
         }
 
         return toBase64(chartToBytes(640, 480, chart));
