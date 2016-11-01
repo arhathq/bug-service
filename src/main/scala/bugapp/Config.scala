@@ -7,13 +7,8 @@ trait Config {
 
   private[bugapp] val config = ConfigFactory.load()
 
-  def propsFromConfig(config: TypesafeConfig): Map[String, Any] = {
-    import scala.collection.JavaConversions._
-    config.entrySet().map(entry => entry.getKey -> entry.getValue.unwrapped())(collection.breakOut)
-  }
-
   /*
-   * Parses following config to a Map
+   * Parses following config into a Map
    *
    *  config = {
    *    key1 = {
@@ -27,13 +22,13 @@ trait Config {
    *    }
    *  }
    */
-  def getConfigMap(config: TypesafeConfig, path: String): Map[String, Map[String, Any]] = {
+  def getConfigMap(config: TypesafeConfig): Map[String, Map[String, Any]] = {
     import scala.collection.JavaConversions._
-    config.getConfig(path).entrySet().
+    config.entrySet().
       map { entry =>
         val keys = entry.getKey.split("\\.").toSeq
-        keys.head -> propsFromConfig(entry.getValue.atPath(keys.last))
-      } (collection.breakOut)
+        keys.head -> (keys.tail.mkString(".") -> entry.getValue.unwrapped())
+      } groupBy(_._1) map(kv => kv._1 -> kv._2.map(kv1 => kv1._2).toMap)
   }
 }
 
@@ -75,8 +70,8 @@ trait ReportConfig extends Config {
   val maxJobs = reportConfig.getInt("maxJobs")
   val fopConf = reportConfig.getString("fopConf")
   val reportDir = reportConfig.getString("reportDir")
-  val templateDir = reportConfig.getString("templateDir")
+  val reportTypes = getConfigMap(reportConfig.getConfig("types"))
 
-  val reportTypes = getConfigMap(reportConfig, "types")
+  val reportTemplate: (String) => String = (reportType) => reportTypes(reportType)("templateDir").asInstanceOf[String]
 
 }
