@@ -7,7 +7,7 @@ import akka.actor.ActorSystem
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
-import bugapp.bugzilla.{BugzillaActor, BugzillaRepository}
+import bugapp.bugzilla.{BugzillaActor, BugzillaRepository, RepositoryEventBus}
 import bugapp.http.HttpClient
 import bugapp.report.ReportActor
 
@@ -25,11 +25,15 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   private val httpClient = new HttpClient(bugzillaUrl, akkaConfig)
 
-  private val bugzillaActor = system.actorOf(BugzillaActor.props(httpClient), "bugzillaActor")
+  private val repositoryEventBus = new RepositoryEventBus(system)
+
+  private val bugzillaActor = system.actorOf(BugzillaActor.props(httpClient, repositoryEventBus), "bugzillaActor")
+  repositoryEventBus.subscribe(bugzillaActor, RepositoryEventBus.ResponseType)
 
   private val bugRepository = new BugzillaRepository(bugzillaActor)
 
-  private val reportActor = system.actorOf(ReportActor.props(bugRepository), "reportActor")
+  private val reportActor = system.actorOf(ReportActor.props(bugRepository, repositoryEventBus), "reportActor")
+  repositoryEventBus.subscribe(reportActor, RepositoryEventBus.RequestType)
 
   private val restService = new RestApiService(bugRepository, reportActor)
 

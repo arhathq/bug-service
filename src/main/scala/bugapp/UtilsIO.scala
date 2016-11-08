@@ -2,16 +2,14 @@ package bugapp
 
 import java.io.RandomAccessFile
 import java.nio.ByteBuffer
-import java.nio.file.{Files, Paths}
-import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
+import java.nio.file.{Files, Paths, StandardCopyOption}
+
+import scala.util.Try
 
 /**
   *
   */
 object UtilsIO {
-
-  private val repositoryDateFormat = DateTimeFormatter.ofPattern("uuuu-MM-dd")
 
   def write(output: String, data: Array[Byte]): Unit = {
 
@@ -33,5 +31,9 @@ object UtilsIO {
   def createDirectoryIfNotExists(path: String) =
     if (!ifFileExists(path)) Files.createDirectory(Paths.get(path))
 
-  def bugzillaDataPath(rootPath: String, date: OffsetDateTime): String = s"$rootPath/${repositoryDateFormat.format(date)}"
+  def bugzillaDataPath(rootPath: String): String = s"$rootPath/repo"
+
+  def move(from: String, to: String): Boolean = {
+    Try(Files.move(Paths.get(from), Paths.get(to), StandardCopyOption.REPLACE_EXISTING)).isSuccess
+  }
 }

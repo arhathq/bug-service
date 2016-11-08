@@ -5,6 +5,7 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.ReportConfig
+import bugapp.bugzilla.RepositoryEventBus
 import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataResponse}
 import bugapp.report.ReportGenerator.{GenerateReport, ReportGenerated}
 import bugapp.repository.BugRepository
@@ -14,16 +15,22 @@ import scala.collection.mutable
 /**
   * @author Alexander Kuleshov
   */
-class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging with ReportConfig {
+class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) extends Actor with ActorLogging with ReportConfig {
   import bugapp.report.ReportActor._
 
   implicit val ec = context.dispatcher
 
   private val senders = mutable.Map.empty[String, ActorRef]
 
-  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, templateDir, self), "reportGenerator")
+  private val pendingRequests = mutable.Set.empty[(GetReport, ActorRef)]
 
-  override def receive: Receive = {
+  private val reportParams = Map.empty[String, Serializable]
+
+  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, "sla.xsl", self), "reportGenerator") //todo: Replace with report specific value
+
+  override def receive: Receive = reportManagement
+
+  def reportManagement: Receive = {
     case GetReport(reportType, startDate, endDate) =>
       log.info(s"Period: [$startDate - $endDate]")
       if (senders.size >= maxJobs)
@@ -55,13 +62,47 @@ class ReportActor(bugRepository: BugRepository) extends Actor with ActorLogging 
         case None =>
       }
 
+    case RepositoryEventBus.UpdateRequired =>
+      log.debug("Switching to System Management Mode")
+      context.become(systemManagement)
+      repositoryEventBus.publish(RepositoryEventBus.UpdateGrantedEvent())
+
+  }
+
+  def systemManagement: Receive = { //TODO: update duplicated code
+
+    case request: GetReport => pendingRequests.add((request, sender))
+
+    case ReportDataResponse(reportId, data) =>
+      sender ! PoisonPill
+      reportBuilder ! GenerateReport(reportId, data)
+
+    case ReportGenerated(reportId, report) =>
+      senders.remove(reportId) match {
+        case Some(sender) => sender ! ReportResult(Some(report))
+        case None =>
+      }
+
+    case ReportError(reportId, message) =>
+      senders.remove(reportId) match {
+        case Some(sender) => sender ! ReportResult(report = None, error = Some(message))
+        case None =>
+      }
+
+    case RepositoryEventBus.UpdateCompleted =>
+      log.debug("Switching to Report Mode")
+      context.become(reportManagement)
+      log.debug(s"Number of pending requests before resend: ${pendingRequests.size}")
+      pendingRequests.foreach(req => req._2 ! req._1)
+      pendingRequests.clear()
+      log.debug(s"Number of pending requests after resend: ${pendingRequests.size}")
   }
 
   def newReportId: String = UUID.randomUUID().toString
 }
 
 object ReportActor {
-  def props(bugRepository: BugRepository) = Props(classOf[ReportActor], bugRepository)
+  def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) = Props(classOf[ReportActor], bugRepository, repositoryEventBus)
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 

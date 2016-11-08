@@ -23,7 +23,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
   protected val log: LoggingAdapter = Logging(s, getClass)
 
-//  QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData)
+  QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData)
 
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
     getBugs((b: Bug) => {
@@ -47,7 +47,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   }
 
   def loadDataIfNeeded(): Future[String] = {
-    val dataPath = UtilsIO.bugzillaDataPath(rootPath, BugApp.toDate)
+    val dataPath = UtilsIO.bugzillaDataPath(rootPath)
     val repositoryPath = s"$dataPath/$repositoryFile"
     if (UtilsIO.ifFileExists(repositoryPath)) Future.successful(repositoryPath)
     else {

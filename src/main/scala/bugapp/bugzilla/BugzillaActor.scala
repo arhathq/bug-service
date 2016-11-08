@@ -21,7 +21,7 @@ import scala.concurrent._
 /**
   *
   */
-class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with BugzillaConfig with CirceStreamSupport {
+class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventBus) extends Actor with ActorLogging with BugzillaConfig with CirceStreamSupport {
   import bugapp.bugzilla.BugzillaActor._
 
   implicit val ec = context.dispatcher
@@ -35,12 +35,13 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
   val bugsFilter: (BugzillaBug) => Boolean = bug =>
     !excludedProducts.contains(bug.product) && !excludedComponents.contains(bug.component)
 
-  override def receive: Receive = process()
+  override def receive: Receive = waitDataload()
 
-  def process(): Receive = {
+  def waitDataload(): Receive = {
     case GetData =>
+      context.become(dataload())
 
-      if (!senders.contains(sender())) senders.add(sender)
+      senders.add(sender)
 
       val endDate = BugApp.toDate
       val startDate = BugApp.fromDate(endDate, fetchPeriod)
@@ -48,20 +49,51 @@ class BugzillaActor(httpClient: HttpClient) extends Actor with ActorLogging with
       log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$endDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
       loadData(startDate).map { response =>
-        val dataPath = UtilsIO.bugzillaDataPath(rootPath, endDate)
-        val rawPath = s"$dataPath/bugs_origin.json"
-        UtilsIO.createDirectoryIfNotExists(dataPath)
-        UtilsIO.write(rawPath, response)
-        log.debug(s"File $rawPath created")
+        val rawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json.tmp"
+        UtilsIO.write(rawFile, response)
+        log.debug(s"File $rawFile created")
 
-        val output = s"$dataPath/$repositoryFile"
-        val future = transform(rawPath, output, batchSize)
-        future.map { res =>
-          if (res.wasSuccessful) log.debug(s"File $output created")
-          senders.foreach(_ ! DataReady(output))
+        val repoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile + ".tmp"
+        val futureResult = transform(rawFile, repoFile, batchSize)
+        futureResult.map { res =>
+          context.become(applyDataload())
+          repositoryEventBus.publish(RepositoryEventBus.UpdateRequiredEvent())
+          if (res.wasSuccessful) {
+            log.debug(s"File $repoFile created")
+          }
+          senders.foreach(_ ! DataReady(repoFile))
           senders.clear
         }
       }
+  }
+
+  def dataload(): Receive = {
+    case GetData => senders.add(sender)
+  }
+
+  def applyDataload(): Receive = {
+    case GetData => senders.add(sender)
+
+    case RepositoryEventBus.UpdateGranted =>
+      log.debug("Access to update data files was granted!")
+      val rawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json.tmp"
+      val appliedRawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json"
+      if (!UtilsIO.move(rawFile, appliedRawFile)) {
+        log.warning(s"File $rawFile wasn't applied")
+      } else {
+        log.debug(s"File $appliedRawFile was loaded")
+      }
+
+      val repoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile + ".tmp"
+      val appliedRepoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile
+      if (!UtilsIO.move(repoFile, appliedRepoFile)) {
+        log.warning(s"File $repoFile wasn't applied")
+      } else {
+        log.debug(s"File $appliedRepoFile was loaded")
+      }
+
+      context.become(waitDataload())
+      repositoryEventBus.publish(RepositoryEventBus.UpdateCompletedEvent())
   }
 
   def transform(from: String, to: String, batchSize: Int): Future[IOResult] = {
@@ -125,7 +157,7 @@ object BugzillaActor {
   case object GetData
   case class DataReady(path: String)
 
-  def props(httpClient: HttpClient) = Props(classOf[BugzillaActor], httpClient)
+  def props(httpClient: HttpClient, repositoryEventBus: RepositoryEventBus): Props = Props(classOf[BugzillaActor], httpClient, repositoryEventBus)
 
   private def fileSource(filename: String): Source[ByteString, Future[IOResult]] = FileIO.fromPath(Paths.get(filename))
 
