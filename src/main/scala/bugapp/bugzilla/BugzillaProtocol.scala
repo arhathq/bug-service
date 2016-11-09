@@ -42,7 +42,8 @@ case class BugzillaBug(id: Int,
                        actual_time: Int,
                        is_creator_accessible: Boolean,
                        is_confirmed: Boolean,
-                       target_milestone: Option[String]
+                       target_milestone: Option[String],
+                       history: Option[BugzillaHistory]
                       )
 
 case class BugzillaHistory(id: Int, alias: Option[String], history: List[BugzillaHistoryItem])

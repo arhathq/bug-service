@@ -19,8 +19,11 @@ object Implicits {
 
   implicit val encoderBugzillaBug = deriveEncoder[BugzillaBug]
   implicit val decoderBugzillaBug = deriveDecoder[BugzillaBug]
+  implicit val encoderBugzillaHistory: Encoder[BugzillaHistory] = deriveEncoder[BugzillaHistory]
   implicit val decoderBugzillaHistory: Decoder[BugzillaHistory] = deriveDecoder[BugzillaHistory]
+  implicit val encoderBugzillaHistoryItem: Encoder[BugzillaHistoryItem] = deriveEncoder[BugzillaHistoryItem]
   implicit val decoderBugzillaHistoryItem: Decoder[BugzillaHistoryItem] = deriveDecoder[BugzillaHistoryItem]
+  implicit val encoderBugzillaHistoryChange: Encoder[BugzillaHistoryChange] = deriveEncoder[BugzillaHistoryChange]
   implicit val decoderBugzillaHistoryChange: Decoder[BugzillaHistoryChange] = deriveDecoder[BugzillaHistoryChange]
   implicit val encoderBugzillaParams: Encoder[BugzillaParams] = deriveEncoder[BugzillaParams]
   implicit val decoderBugzillaResponse: Decoder[BugzillaResponse[BugzillaResult]] = deriveDecoder[BugzillaResponse[BugzillaResult]]

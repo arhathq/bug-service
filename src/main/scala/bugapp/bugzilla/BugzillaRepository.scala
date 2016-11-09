@@ -26,16 +26,14 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData)
 
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
-    getBugs((b: Bug) => {
-      if (b.opened.isAfter(fromDate)) true else false
-    })
+    getBugs(bug => bug.opened.isAfter(fromDate))
   }
 
   def getBugHistory(bugId: List[Int]): Seq[BugHistory] = {
     bugId.map(BugHistory(_, None, Seq()))
   }
 
-  def getBugs(f: (Bug) => Boolean): Future[Seq[Bug]] = {
+  private def getBugs(f: (Bug) => Boolean): Future[Seq[Bug]] = {
     loadDataIfNeeded().flatMap { path =>
       FileIO.fromPath(Paths.get(path)).
         via(CirceStreamSupport.decode[List[Bug]]).
@@ -47,8 +45,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   }
 
   def loadDataIfNeeded(): Future[String] = {
-    val dataPath = UtilsIO.bugzillaDataPath(rootPath)
-    val repositoryPath = s"$dataPath/$repositoryFile"
+    val repositoryPath = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile
     if (UtilsIO.ifFileExists(repositoryPath)) Future.successful(repositoryPath)
     else {
       implicit val timeout = Timeout(fetchTimeout seconds)

@@ -32,8 +32,9 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
   val batchSize = 200
   val parallel = 8
 
-  val bugsFilter: (BugzillaBug) => Boolean = bug =>
+  val bugsFilter: (BugzillaBug) => Boolean = { bug =>
     !excludedProducts.contains(bug.product) && !excludedComponents.contains(bug.component)
+  }
 
   override def receive: Receive = waitDataload()
 
@@ -96,17 +97,47 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       repositoryEventBus.publish(RepositoryEventBus.UpdateCompletedEvent())
   }
 
+  def loadHistoryStream(source: Future[String], destination: String, f: (BugzillaBug) => Boolean, batchSize: Int = 200, parallelism: Int = 8): Future[IOResult] = {
+    Source.fromFuture(source).map(source => ByteString(source)).
+      via(decode[BugzillaResponse[BugzillaResult]]).
+      map(response => response.result.get.bugs).
+      mapConcat(identity).
+      filter(f).
+      grouped(batchSize).
+      via(loadHistoryAndTransformFlow(parallelism, (bug, history) => bug.copy(history = Some(history)))).
+      via(encode[Seq[BugzillaBug]]).
+      runWith(fileSink(destination))
+  }
+
+  def loadHistoryAndTransformFlow[T](parallelism: Int, transform: (BugzillaBug, BugzillaHistory) => T)(implicit ec: ExecutionContext) =
+    Flow[Seq[BugzillaBug]].mapAsync(parallelism) { bugs =>
+      loadHistoriesStream(bugs.map(bug => bug.id)).map { histories =>
+        for {
+          bug <- bugs
+          history <- histories
+          if bug.id == history.id
+        } yield transform(bug, history)
+      }
+    } collect { case bugs: Seq[T] => bugs }
+
   def transform(from: String, to: String, batchSize: Int): Future[IOResult] = {
+    fileSource(from).
+      via(decode[BugzillaResponse[BugzillaResult]]).
+      map(response => response.result.get.bugs).
+      mapConcat(identity).
+      filter(bugsFilter).
+      grouped(batchSize).
+      via(loadHistoryAndTransformFlow(parallel, (bug, history) => createBug(bug, history))).
+      via(encode[Seq[Bug]]).
+      runWith(fileSink(to))
+  }
 
-    val source = fileSource(from)
-    val sink = fileSink(to)
-
-    val future = source.via(decode[BugzillaResponse[BugzillaResult]]).
-      via(Flow[BugzillaResponse[BugzillaResult]].map(_.result.get.bugs)).
-      mapConcat(identity).filter(bugsFilter).grouped(batchSize).
-      via(transformBugs(parallel)).via(encode[Seq[Bug]]).runWith(sink)
-
-    future
+  val loadHistoriesStream: (Seq[Int]) => Future[Seq[BugzillaHistory]] = { ids =>
+    Source.fromFuture(loadHistory(ids)).map(ByteString(_)).
+      via(decode[BugzillaResponse[BugzillaHistoryResult]]).
+      map(response => response.result.get.bugs).
+      toMat(Sink.seq)(Keep.right).
+      run().map(_.flatten)
   }
 
   /**
@@ -129,28 +160,6 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
     httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)
   }
 
-  val loadHistories: (Seq[Int]) => Future[Seq[BugzillaHistory]] = ids => {
-    val stream = Source.fromFuture(loadHistory(ids)).map(ByteString(_)).
-      via(decode[BugzillaResponse[BugzillaHistoryResult]]).
-      via(Flow[BugzillaResponse[BugzillaHistoryResult]].map(_.result.get.bugs)).
-      toMat(Sink.seq)(Keep.right)
-    stream.run().map(_.flatten)
-  }
-
-  private def transformBugs(parallel: Int)(implicit ec: ExecutionContext) = {
-    Flow[Seq[BugzillaBug]].mapAsync(parallel) {bugs =>
-      val ids = bugs.map(_.id)
-      val future = loadHistories(ids)
-      future.map { histories =>
-        val result = for {
-          bug <- bugs
-          history <- histories
-          if bug.id == history.id
-        } yield createBug(bug, history)
-        result.toList
-      }
-    }.collect { case bugs: List[Bug] => bugs }
-  }
 }
 
 object BugzillaActor {
