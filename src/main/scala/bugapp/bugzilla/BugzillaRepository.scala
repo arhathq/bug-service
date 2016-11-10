@@ -45,7 +45,7 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
   }
 
   def loadDataIfNeeded(): Future[String] = {
-    val repositoryPath = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile
+    val repositoryPath = rootPath + "/" + repositoryFile
     if (UtilsIO.ifFileExists(repositoryPath)) Future.successful(repositoryPath)
     else {
       implicit val timeout = Timeout(fetchTimeout seconds)

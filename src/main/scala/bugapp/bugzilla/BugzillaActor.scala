@@ -49,21 +49,22 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       val currentWeek = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
       log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$endDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
-      loadData(startDate).map { response =>
-        val rawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json.tmp"
-        UtilsIO.write(rawFile, response)
-        log.debug(s"File $rawFile created")
+      val data = loadData(startDate)
+      val rawFile = rootPath + "/bugzilla.json.tmp"
 
-        val repoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile + ".tmp"
-        val futureResult = transform(rawFile, repoFile, batchSize)
-        futureResult.map { res =>
-          context.become(applyDataload())
-          repositoryEventBus.publish(RepositoryEventBus.UpdateRequiredEvent())
-          if (res.wasSuccessful) {
-            log.debug(s"File $repoFile created")
+      loadHistoryStream(data, rawFile, bugsFilter).map { result =>
+        if (result.wasSuccessful) {
+          log.debug(s"File $rawFile created")
+          val repoFile = rootPath + "/" + repositoryFile + ".tmp"
+          transformationStream(rawFile, repoFile).map { transformationResult =>
+            context.become(applyDataload())
+            repositoryEventBus.publish(RepositoryEventBus.UpdateRequiredEvent())
+            if (transformationResult.wasSuccessful) {
+              log.debug(s"File $repoFile created")
+              senders.foreach(sender => sender ! DataReady(repoFile))
+            }
+            senders.clear
           }
-          senders.foreach(_ ! DataReady(repoFile))
-          senders.clear
         }
       }
   }
@@ -77,16 +78,16 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
 
     case RepositoryEventBus.UpdateGranted =>
       log.debug("Access to update data files was granted!")
-      val rawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json.tmp"
-      val appliedRawFile = UtilsIO.bugzillaDataPath(rootPath) + "/bugs_origin.json"
+      val rawFile = rootPath + "/bugzilla.json.tmp"
+      val appliedRawFile = rootPath + "/bugzilla.json"
       if (!UtilsIO.move(rawFile, appliedRawFile)) {
         log.warning(s"File $rawFile wasn't applied")
       } else {
         log.debug(s"File $appliedRawFile was loaded")
       }
 
-      val repoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile + ".tmp"
-      val appliedRepoFile = UtilsIO.bugzillaDataPath(rootPath) + "/" + repositoryFile
+      val repoFile = rootPath + "/" + repositoryFile + ".tmp"
+      val appliedRepoFile = rootPath + "/" + repositoryFile
       if (!UtilsIO.move(repoFile, appliedRepoFile)) {
         log.warning(s"File $repoFile wasn't applied")
       } else {
@@ -109,7 +110,7 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       runWith(fileSink(destination))
   }
 
-  def loadHistoryAndTransformFlow[T](parallelism: Int, transform: (BugzillaBug, BugzillaHistory) => T)(implicit ec: ExecutionContext) =
+  def loadHistoryAndTransformFlow[T](parallelism: Int, transform: (BugzillaBug, BugzillaHistory) => T) =
     Flow[Seq[BugzillaBug]].mapAsync(parallelism) { bugs =>
       loadHistoriesStream(bugs.map(bug => bug.id)).map { histories =>
         for {
@@ -120,24 +121,25 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       }
     } collect { case bugs: Seq[T] => bugs }
 
-  def transform(from: String, to: String, batchSize: Int): Future[IOResult] = {
-    fileSource(from).
-      via(decode[BugzillaResponse[BugzillaResult]]).
-      map(response => response.result.get.bugs).
-      mapConcat(identity).
-      filter(bugsFilter).
-      grouped(batchSize).
-      via(loadHistoryAndTransformFlow(parallel, (bug, history) => createBug(bug, history))).
-      via(encode[Seq[Bug]]).
-      runWith(fileSink(to))
-  }
-
   val loadHistoriesStream: (Seq[Int]) => Future[Seq[BugzillaHistory]] = { ids =>
     Source.fromFuture(loadHistory(ids)).map(ByteString(_)).
       via(decode[BugzillaResponse[BugzillaHistoryResult]]).
       map(response => response.result.get.bugs).
       toMat(Sink.seq)(Keep.right).
       run().map(_.flatten)
+  }
+
+  def transformationStream(source: String, destination: String, batchSize: Int = 200, parallelism: Int = 8) = {
+    fileSource(source).
+      via(decode[Seq[BugzillaBug]]).
+      map(bugs => bugs.toList).
+      mapConcat(identity).
+      grouped(batchSize).
+      via(Flow[Seq[BugzillaBug]].mapAsync(parallelism) { bugs =>
+        Future.successful(bugs.map(bug => createBug(bug, bug.history.get)))
+      }. collect { case bugs: Seq[Bug] => bugs }).
+      via(encode[Seq[Bug]]).
+      runWith(fileSink(destination))
   }
 
   /**

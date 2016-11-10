@@ -31,8 +31,6 @@ object UtilsIO {
   def createDirectoryIfNotExists(path: String) =
     if (!ifFileExists(path)) Files.createDirectory(Paths.get(path))
 
-  def bugzillaDataPath(rootPath: String): String = s"$rootPath/repo"
-
   def move(from: String, to: String): Boolean = {
     Try(Files.move(Paths.get(from), Paths.get(to), StandardCopyOption.REPLACE_EXISTING)).isSuccess
   }
