@@ -72,6 +72,6 @@ trait ReportConfig extends Config {
   val reportDir = reportConfig.getString("reportDir")
   val reportTypes = getConfigMap(reportConfig.getConfig("types"))
 
-  val reportTemplate: (String) => String = (reportType) => reportTypes(reportType)("templateDir").asInstanceOf[String]
+  val reportTemplate: (String) => String = (reportType) => reportTypes(reportType)("template").asInstanceOf[String]
 
 }

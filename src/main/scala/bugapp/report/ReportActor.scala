@@ -24,9 +24,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
   private val pendingRequests = mutable.Set.empty[(GetReport, ActorRef)]
 
-  private val reportParams = Map.empty[String, Serializable]
-
-  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, "sla.xsl", self), "reportGenerator") //todo: Replace with report specific value
+  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, self), "reportGenerator")
 
   override def receive: Receive = reportManagement
 
@@ -42,17 +40,21 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
         bugsFuture.foreach { bugs =>
           val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
-          reportDataBuilder ! GetReportData(reportId, reportType, bugs)
+          val reportParams = Map[String, Any](
+            ReportParams.ReportType -> reportType
+          )
+          reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
         }
       }
 
-    case ReportDataResponse(reportId, data) =>
+    case ReportDataResponse(data) =>
+      val template = reportTemplate(data.reportType)
       sender ! PoisonPill
-      reportBuilder ! GenerateReport(reportId, data)
+      reportBuilder ! GenerateReport(data.reportId, template, data.result)
 
-    case ReportGenerated(reportId, report) =>
-      senders.remove(reportId) match {
-        case Some(sender) => sender ! ReportResult(Some(report))
+    case ReportGenerated(report) =>
+      senders.remove(report.reportId) match {
+        case Some(sender) => sender ! ReportResult(Some(report.data))
         case None =>
       }
 
@@ -73,13 +75,14 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
     case request: GetReport => pendingRequests.add((request, sender))
 
-    case ReportDataResponse(reportId, data) =>
+    case ReportDataResponse(data) =>
+      val template = reportTemplate(data.reportType)
       sender ! PoisonPill
-      reportBuilder ! GenerateReport(reportId, data)
+      reportBuilder ! GenerateReport(data.reportId, template, data.result)
 
-    case ReportGenerated(reportId, report) =>
-      senders.remove(reportId) match {
-        case Some(sender) => sender ! ReportResult(Some(report))
+    case ReportGenerated(report) =>
+      senders.remove(report.reportId) match {
+        case Some(sender) => sender ! ReportResult(Some(report.data))
         case None =>
       }
 
@@ -107,4 +110,9 @@ object ReportActor {
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 
   case class ReportError(reportId: String, message: String)
+}
+
+object ReportParams {
+  val ReportType = "reportType"
+  val ReportTemplate = "reportTemplate"
 }

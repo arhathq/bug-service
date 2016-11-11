@@ -1,7 +1,7 @@
 package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
 
 /**
   * @author Alexander Kuleshov
@@ -11,7 +11,7 @@ class AllOpenBugsReportActor(owner: ActorRef) extends Actor with ActorLogging {
   implicit val execution = context.dispatcher
 
   def receive: Receive = {
-    case ReportDataRequest(reportId, bugs) =>
+    case ReportDataRequest(reportId, reportParams, bugs) =>
         log.info(s"Bugs to process: ${bugs.size}")
         val data =
           <all-open-bugs>
@@ -80,7 +80,7 @@ class AllOpenBugsReportActor(owner: ActorRef) extends Actor with ActorLogging {
               <content-value></content-value>
             </image>
           </all-open-bugs>
-         owner ! ReportDataResponse(reportId, data)
+         owner ! ReportDataResponse(ReportData(reportId, reportParams(ReportParams.ReportType).asInstanceOf[String], data))
   }
 }
 

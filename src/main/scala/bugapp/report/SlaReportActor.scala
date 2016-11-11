@@ -6,7 +6,7 @@ import java.time.format.DateTimeFormatter
 import akka.actor.{Actor, ActorLogging, Props}
 import bugapp.BugApp
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
@@ -25,7 +25,7 @@ class SlaReportActor extends Actor with ActorLogging {
   private val bugzillaUri = BugApp.bugzillaUrl
 
   override def receive: Receive = {
-    case ReportDataRequest(reportId, bugs) =>
+    case ReportDataRequest(reportId, reportParams, bugs) =>
       val startDate = BugApp.fromDate(toDate, weekPeriod)
       val marks = Metrics.marks(toDate, weekPeriod)
       val actualBugs = bugs.filter(bugsForPeriod(_, startDate))
@@ -57,7 +57,8 @@ class SlaReportActor extends Actor with ActorLogging {
           </sla-chart>
         </sla>
 
-      context.parent ! ReportDataResponse(reportId, data)
+      val reportType = reportParams(ReportParams.ReportType).asInstanceOf[String]
+      context.parent ! ReportDataResponse(ReportData(reportId, reportType, data))
   }
 
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String]): Elem = {
