@@ -66,6 +66,7 @@ class SlaReportActor extends Actor with ActorLogging {
     val p1p2 = p1 ++ p2
 
     <out-sla-bugs>
+      <week-period>{marks.length}</week-period>
       <table>
         {outSlaTableElem(Metrics.P1Priority, p1, bugtrackerUri)}
         {outSlaTableElem(Metrics.P2Priority, p2, bugtrackerUri)}

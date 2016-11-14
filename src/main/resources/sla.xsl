@@ -125,7 +125,7 @@
     </xsl:template>
 
     <xsl:template match="out-sla-bugs">
-        <fo:block font-size="12pt" font-weight="bold" space-after=".5em">P1/P2 out of SLA during last 4 weeks</fo:block>
+        <fo:block font-size="12pt" font-weight="bold" space-after=".5em">P1/P2 out of SLA during last <xsl:value-of select="week-period"/> weeks</fo:block>
         <xsl:apply-templates select="table"/>
         <fo:block font-size="12pt" font-weight="bold" space-before="3em" space-after=".5em">Out of SLA list</fo:block>
         <xsl:apply-templates select="list"/>
