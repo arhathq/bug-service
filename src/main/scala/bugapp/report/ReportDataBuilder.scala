@@ -18,7 +18,10 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
   def createWorkers(reportType: String): Set[ActorRef] = reportType match {
     case "weekly" => Set(context.actorOf(AllOpenBugsReportActor.props(self)))
-    case "sla" => Set(context.actorOf(SlaReportActor.props()))
+    case "sla" => Set(
+      context.actorOf(SlaReportActor.props()),
+      context.actorOf(BugsOutSlaActor.props())
+    )
     case _ => Set()
   }
 

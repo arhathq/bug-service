@@ -17,7 +17,7 @@
                 <xsl:apply-templates select="report-footer"/>
                 <fo:flow flow-name="xsl-region-body">
                     <fo:block/>
-                    <xsl:apply-templates select="sla/out-sla-bugs"/>
+                    <xsl:apply-templates select="out-sla-bugs"/>
                 </fo:flow>
             </fo:page-sequence>
 
