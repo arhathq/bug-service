@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
-import bugapp.ReportConfig
+import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
 import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataResponse}
 import bugapp.report.ReportGenerator.{GenerateReport, ReportGenerated}
@@ -29,7 +29,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
   override def receive: Receive = reportManagement
 
   def reportManagement: Receive = {
-    case GetReport(reportType, startDate, endDate) =>
+    case GetReport(reportType, startDate, endDate, weekPeriod) =>
       log.info(s"Period: [$startDate - $endDate]")
       if (senders.size >= maxJobs)
         sender !  ReportResult(report = None, error = Some(s"Max reports is limited: $maxJobs"))
@@ -41,7 +41,11 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
         bugsFuture.foreach { bugs =>
           val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
           val reportParams = Map[String, Any](
-            ReportParams.ReportType -> reportType
+            ReportParams.ReportType -> reportType,
+            ReportParams.StartDate -> startDate,
+            ReportParams.EndDate -> endDate,
+            ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
+            ReportParams.WeekPeriod -> weekPeriod
           )
           reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
         }
@@ -106,7 +110,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
 object ReportActor {
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) = Props(classOf[ReportActor], bugRepository, repositoryEventBus)
-  case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime)
+  case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 
   case class ReportError(reportId: String, message: String)
@@ -115,4 +119,8 @@ object ReportActor {
 object ReportParams {
   val ReportType = "reportType"
   val ReportTemplate = "reportTemplate"
+  val StartDate = "startDate"
+  val EndDate = "endDate"
+  val BugtrackerUri = "bugtrackerUri"
+  val WeekPeriod = "weekPeriod"
 }

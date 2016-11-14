@@ -1,7 +1,5 @@
 package bugapp.http
 
-import java.time.OffsetDateTime
-
 import akka.actor.{ActorRef, ActorSystem}
 import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.server.Directives._
@@ -37,7 +35,7 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef)(impl
         extractRequest { req =>
           val endDate = BugApp.toDate
           val startDate = BugApp.fromDate(endDate, weeks)
-          sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate)).mapTo[ReportResult])
+          sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult])
         }
       }
     }

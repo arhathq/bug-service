@@ -4,7 +4,6 @@ import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, Props}
-import bugapp.BugApp
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
@@ -20,21 +19,21 @@ class SlaReportActor extends Actor with ActorLogging {
 
   private val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
-  private val weekPeriod = 4
-  private val toDate = BugApp.toDate
-  private val bugzillaUri = BugApp.bugzillaUrl
-
   override def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
-      val startDate = BugApp.fromDate(toDate, weekPeriod)
-      val marks = Metrics.marks(toDate, weekPeriod)
+      val startDate = reportParams(ReportParams.StartDate).asInstanceOf[OffsetDateTime]
+      val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
+      val weekPeriod = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
+      val bugtrackerUri = reportParams(ReportParams.BugtrackerUri).asInstanceOf[String]
+
+      val marks = Metrics.marks(endDate, weekPeriod)
       val actualBugs = bugs.filter(bugsForPeriod(_, startDate))
       val outSlaBugs = bugsOutSla(actualBugs)
       val p1OutSla = outSlaBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OutSla = outSlaBugs.getOrElse(Metrics.P2Priority, Seq())
 
       log.debug(s"Start date $startDate (${Metrics.weeksStrFormat.format(startDate)})")
-      log.debug(s"End date $toDate (${Metrics.weeksStrFormat.format(toDate)})")
+      log.debug(s"End date $endDate (${Metrics.weeksStrFormat.format(endDate)})")
       log.debug(s"Week Period $weekPeriodElem")
       log.debug(s"Marks: $marks")
       log.debug(s"Filtered Bugs: $actualBugs")
@@ -42,7 +41,7 @@ class SlaReportActor extends Actor with ActorLogging {
 
       val data =
         <sla>
-          {bugsOutSlaElem(outSlaBugs, marks)}
+          {bugsOutSlaElem(outSlaBugs, marks, bugtrackerUri)}
           <p1-sla>
             {sla(Metrics.P1Priority, marks, p1OutSla, actualBugs.filter(_.priority == Metrics.P1Priority))}
           </p1-sla>
@@ -61,20 +60,20 @@ class SlaReportActor extends Actor with ActorLogging {
       context.parent ! ReportDataResponse(ReportData(reportId, reportType, data))
   }
 
-  def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String]): Elem = {
+  def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String], bugtrackerUri: String): Elem = {
     val p1 = bugs.getOrElse(Metrics.P1Priority, Seq())
     val p2 = bugs.getOrElse(Metrics.P2Priority, Seq())
     val p1p2 = p1 ++ p2
 
     <out-sla-bugs>
       <table>
-        {outSlaTableElem(Metrics.P1Priority, p1)}
-        {outSlaTableElem(Metrics.P2Priority, p2)}
-        {outSlaTableElem("Grand Total", p1p2)}
+        {outSlaTableElem(Metrics.P1Priority, p1, bugtrackerUri)}
+        {outSlaTableElem(Metrics.P2Priority, p2, bugtrackerUri)}
+        {outSlaTableElem("Grand Total", p1p2, bugtrackerUri)}
       </table>
       <list>
-        {bugListElem(p1)}
-        {bugListElem(p2)}
+        {bugListElem(p1, bugtrackerUri)}
+        {bugListElem(p2, bugtrackerUri)}
       </list>
       <image>
         <content-type>image/jpeg</content-type>
@@ -83,7 +82,7 @@ class SlaReportActor extends Actor with ActorLogging {
     </out-sla-bugs>
   }
 
-  def outSlaTableElem(priority: String, bugs: Seq[Bug]): Elem = {
+  def outSlaTableElem(priority: String, bugs: Seq[Bug], bugtrackerUri: String): Elem = {
     val grouped = bugs.groupBy(_.stats.status)
     val opened = grouped.getOrElse(Metrics.OpenStatus, Seq()).length
     val fixed = grouped.getOrElse(Metrics.FixedStatus, Seq()).length
@@ -95,11 +94,11 @@ class SlaReportActor extends Actor with ActorLogging {
       <invalid>{invalid}</invalid>
       <opened>{opened}</opened>
       <total>{fixed + opened + invalid}</total>
-      <link>{s"$bugzillaUri/buglist.cgi?bug_id=$ids"}</link>
+      <link>{s"$bugtrackerUri/buglist.cgi?bug_id=$ids"}</link>
     </record>
   }
 
-  def bugListElem(bugs: Seq[Bug]): Seq[Elem] = {
+  def bugListElem(bugs: Seq[Bug], bugtrackerUri: String): Seq[Elem] = {
     bugs.map {bug =>
       <bug>
         <id>{bug.id}</id>
@@ -114,7 +113,7 @@ class SlaReportActor extends Actor with ActorLogging {
         <daysOpen>{bug.stats.daysOpen}</daysOpen>
         <reopenedCount>{bug.stats.reopenCount}</reopenedCount>
         <summary>{PCData(bug.summary)}</summary>
-        <link>{s"$bugzillaUri/show_bug.cgi?id=${bug.id}"}</link>
+        <link>{s"$bugtrackerUri/show_bug.cgi?id=${bug.id}"}</link>
       </bug>
     }
   }
