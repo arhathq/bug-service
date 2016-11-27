@@ -6,7 +6,7 @@ import java.time.temporal.IsoFields
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.{HttpMethods, Uri}
-import akka.stream.{ActorMaterializer, IOResult}
+import akka.stream.{ActorMaterializer, ActorMaterializerSettings, IOResult, Supervision}
 import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, Source}
 import akka.util.ByteString
 import bugapp.{BugApp, BugzillaConfig, UtilsIO}
@@ -24,10 +24,17 @@ import scala.concurrent._
 class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventBus) extends Actor with ActorLogging with BugzillaConfig with CirceStreamSupport {
   import bugapp.bugzilla.BugzillaActor._
 
-  implicit val ec = context.dispatcher
-  implicit val materializer = ActorMaterializer()
-
   private val senders = mutable.Set.empty[ActorRef]
+
+  val decider: Supervision.Decider = {
+    ex =>
+      log.error(ex, "Stream failed")
+      senders.clear()
+      context.become(waitDataload())
+      Supervision.Stop
+  }
+  implicit val materializer = ActorMaterializer(ActorMaterializerSettings(context.system).withSupervisionStrategy(decider))
+  implicit val ec = context.dispatcher
 
   val batchSize = 200
   val parallel = 8
@@ -63,7 +70,6 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
               log.debug(s"File $repoFile created")
               senders.foreach(sender => sender ! DataReady(repoFile))
             }
-            senders.clear
           }
         }
       }
@@ -121,7 +127,7 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       }
     } collect { case bugs: Seq[T] => bugs }
 
-  val loadHistoriesStream: (Seq[Int]) => Future[Seq[BugzillaHistory]] = { ids =>
+  def loadHistoriesStream: (Seq[Int]) => Future[Seq[BugzillaHistory]] = { ids =>
     Source.fromFuture(loadHistory(ids)).map(ByteString(_)).
       via(decode[BugzillaResponse[BugzillaHistoryResult]]).
       map(response => response.result.get.bugs).
