@@ -5,7 +5,8 @@ version := "1.0"
 scalaVersion := "2.11.8"
 
 libraryDependencies ++= {
-  val akkaVersion         = "2.4.11"
+  val akkaVersion         = "2.4.14"
+  val akkaHttpVersion     = "10.0.0"
   val circeVersion        = "0.5.4"
   val scalaTestVersion    = "2.2.6"
   val scalaAsyncVersion   = "0.9.5"
@@ -13,8 +14,8 @@ libraryDependencies ++= {
   val scalazVersion       = "7.2.5"
   Seq(
     "com.typesafe.akka"      %% "akka-actor"                        % akkaVersion,
-    "com.typesafe.akka"      %% "akka-http-spray-json-experimental" % akkaVersion,
-    "com.typesafe.akka"      %% "akka-http-experimental"            % akkaVersion,
+    "com.typesafe.akka"      %% "akka-http-spray-json"              % akkaHttpVersion,
+    "com.typesafe.akka"      %% "akka-http"                         % akkaHttpVersion,
     "com.typesafe.akka"      %% "akka-slf4j"                        % akkaVersion,
 
     "com.enragedginger"      %% "akka-quartz-scheduler"             % "1.5.0-akka-2.4.x",
@@ -33,7 +34,8 @@ libraryDependencies ++= {
     "org.scalaz"             %% "scalaz-core"                       % scalazVersion,
     "org.scalaz"             %% "scalaz-concurrent"                 % scalazVersion,
 
-    "org.apache.xmlgraphics"  % "fop"                               % "2.1" excludeAll ExclusionRule(organization = "org.apache.xmlgraphics", name = "batik-ext"),
+    "org.apache.xmlgraphics"  % "fop"                               % "2.1"
+      excludeAll ExclusionRule(organization = "org.apache.xmlgraphics", name = "batik-ext"),
 
     "net.sf.saxon"            % "Saxon-HE"                          % "9.7.0-8",
 

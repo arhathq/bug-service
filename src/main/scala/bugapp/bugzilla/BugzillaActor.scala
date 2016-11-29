@@ -231,7 +231,7 @@ object BugzillaActor {
     Bug(bug.id, bug.severity, priority(bug.priority), bug.status, bug.resolution,
       bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
-      bug.product, bug.component, "", bug.summary, "",
+      bug.product, bug.component, bug.cf_production.getOrElse(""), bug.summary, bug.platform,
       createBugStats(bug, history))
   }
 }

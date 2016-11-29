@@ -53,6 +53,7 @@ trait BugzillaConfig extends Config {
   val repositoryFile = bugzillaConfig.getString("repository-file")
   val fetchTimeout = bugzillaConfig.getInt("fetch-timeout")
 
+  val environment = bugzillaConfig.getString("environment")
   val excludedProducts = bugzillaConfig.getStringList("excludedProducts")
   val excludedComponents = bugzillaConfig.getStringList("excludedComponents")
 }
