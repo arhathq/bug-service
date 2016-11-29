@@ -3,7 +3,7 @@ package bugapp.report
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
@@ -14,7 +14,7 @@ import scala.xml._
 /**
   *
   */
-class SlaReportActor extends Actor with ActorLogging {
+class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
   import bugapp.report.SlaReportActor._
 
   override def receive: Receive = {
@@ -47,7 +47,7 @@ class SlaReportActor extends Actor with ActorLogging {
           </sla-chart>
         </sla>
 
-      context.parent ! ReportDataResponse(ReportData(reportId, reportType, data))
+      owner ! ReportDataResponse(ReportData(reportId, reportType, data))
   }
 
   def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Double, String, String)] = {
@@ -87,7 +87,7 @@ class SlaReportActor extends Actor with ActorLogging {
 object SlaReportActor {
   private[report] val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
 
-  def props() = Props(classOf[SlaReportActor])
+  def props(owner: ActorRef) = Props(classOf[SlaReportActor], owner)
 
   val bugsForPeriod: (Bug, OffsetDateTime) => Boolean = (bug, startDate) => {
     bug.priority match {
@@ -109,7 +109,7 @@ object SlaReportActor {
     })
   }
 
-  val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 100.0 else (count * 100 / totalCount).toDouble
+  val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 100.0 else count * 100.0 / totalCount
 
   val weekPeriodElem: (String, String, Int, Int) => Elem = (priority, mark, outSlaCount, totalCount) => {
     <week-period>

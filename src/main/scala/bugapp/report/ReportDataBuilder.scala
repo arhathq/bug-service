@@ -17,10 +17,20 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   private val data = mutable.Map.empty[String, (String, List[Elem])]
 
   def createWorkers(reportType: String): Set[ActorRef] = reportType match {
-    case "weekly" => Set(context.actorOf(AllOpenBugsReportActor.props(self)))
+    case "weekly" => Set(
+      context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
+      context.actorOf(OpenTopBugListActor.props(self)),
+      context.actorOf(ReportersBugNumberByPeriodActor.props(self)),
+      context.actorOf(ReportersBugNumberByThisWeekActor.props(self)),
+      context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
+      context.actorOf(OpenBugsNumberByProductActor.props(self)),
+      context.actorOf(BugsByPeriodChartActor.props(self)),
+      context.actorOf(TopAsigneesActor.props(self)),
+      context.actorOf(WeeklySummaryReportActor.props(self))
+    )
     case "sla" => Set(
-      context.actorOf(SlaReportActor.props()),
-      context.actorOf(BugsOutSlaActor.props())
+      context.actorOf(SlaReportActor.props(self)),
+      context.actorOf(BugsOutSlaActor.props(self))
     )
     case _ => Set()
   }

@@ -2,7 +2,7 @@ package bugapp.report
 
 import java.time.OffsetDateTime
 
-import akka.actor.{Actor, ActorLogging, Props}
+import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
@@ -13,7 +13,7 @@ import scala.xml.{Elem, PCData}
 /**
   *
   */
-class BugsOutSlaActor extends Actor with ActorLogging {
+class BugsOutSlaActor(owner: ActorRef) extends Actor with ActorLogging {
   import bugapp.report.SlaReportActor._
 
   override def receive: Receive = {
@@ -30,7 +30,7 @@ class BugsOutSlaActor extends Actor with ActorLogging {
 
       val data = bugsOutSlaElem(outSlaBugs, marks, bugtrackerUri)
 
-      context.parent ! ReportDataResponse(ReportData(reportId, reportType, data))
+      owner ! ReportDataResponse(ReportData(reportId, reportType, data))
   }
 
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String], bugtrackerUri: String): Elem = {
@@ -112,5 +112,5 @@ class BugsOutSlaActor extends Actor with ActorLogging {
 }
 
 object BugsOutSlaActor {
-  def props() = Props(classOf[BugsOutSlaActor])
+  def props(owner: ActorRef) = Props(classOf[BugsOutSlaActor], owner)
 }
