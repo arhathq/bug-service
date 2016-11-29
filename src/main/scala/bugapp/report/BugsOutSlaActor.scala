@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
@@ -30,7 +30,7 @@ class BugsOutSlaActor(owner: ActorRef) extends Actor with ActorLogging {
 
       val data = bugsOutSlaElem(outSlaBugs, marks, bugtrackerUri)
 
-      owner ! ReportDataResponse(ReportData(reportId, reportType, data))
+      owner ! ReportDataResponse(reportId, data)
   }
 
   def bugsOutSlaElem(bugs: Map[String, Seq[Bug]], marks: Seq[String], bugtrackerUri: String): Elem = {

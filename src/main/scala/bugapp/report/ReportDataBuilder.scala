@@ -14,7 +14,8 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   import ReportDataBuilder._
 
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
-  private val data = mutable.Map.empty[String, (String, List[Elem])]
+  private val requests = mutable.Map.empty[String, Map[String, Any]]
+  private val data = mutable.Map.empty[String, List[Elem]]
 
   def createWorkers(reportType: String): Set[ActorRef] = reportType match {
     case "weekly" => Set(
@@ -40,22 +41,24 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
       val reportType: String = reportParams(ReportParams.ReportType).asInstanceOf[String]
       val workers = createWorkers(reportType)
       jobs += reportId -> workers
+      requests += reportId -> reportParams
       log.info(s"Job [$reportId], Workers $jobs")
       workers.foreach(_ ! ReportDataRequest(reportId, reportParams, bugs))
 
-    case ReportDataResponse(reportData) =>
-      val reportId = reportData.reportId
-      data.get(reportData.reportId) match {
-        case Some(reportDataList) => data += reportId -> ((reportData.reportType, reportData.result :: reportDataList._2))
-        case None => data += reportId -> (reportData.reportType, reportData.result :: Nil)
+    case ReportDataResponse(reportId, result) =>
+      data.get(reportId) match {
+        case Some(reportDataList) => data += reportId -> (result :: reportDataList)
+        case None => data += reportId -> (result :: Nil)
       }
       jobs.get(reportId) match {
         case Some(workers) =>
           sender ! PoisonPill
           val busyWorkers = workers - sender
           if (busyWorkers.isEmpty) {
+            val reportData = buildReportData(reportId)
             jobs -= reportId
-            reportActor ! ReportDataResponse(buildReportData(reportId))
+            requests -= reportId
+            reportActor ! reportData
           } else
             jobs += reportId -> busyWorkers
         case None =>
@@ -63,8 +66,10 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   }
 
   def buildReportData(reportId: String): ReportData = {
+    val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[String]
+
     data.get(reportId) match {
-      case Some((reportType, dataList)) =>
+      case Some(dataList) =>
         val reportData = new xml.NodeBuffer()
         dataList.foreach(reportData.append)
         data -= reportId
@@ -87,11 +92,10 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
 object ReportDataBuilder {
   case class GetReportData(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
+  case class ReportData(reportId: String, reportType: String, result: Elem)
 
   case class ReportDataRequest(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
-  case class ReportDataResponse(reportData: ReportData)
-
-  case class ReportData(reportId: String, reportType: String, result: Elem)
+  case class ReportDataResponse(reportId: String, result: Elem)
 
   def props(reportActor: ActorRef) = Props(classOf[ReportDataBuilder], reportActor)
 }

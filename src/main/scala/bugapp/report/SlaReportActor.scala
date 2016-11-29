@@ -5,7 +5,7 @@ import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
@@ -47,7 +47,7 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
           </sla-chart>
         </sla>
 
-      owner ! ReportDataResponse(ReportData(reportId, reportType, data))
+      owner ! ReportDataResponse(reportId, data)
   }
 
   def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Double, String, String)] = {

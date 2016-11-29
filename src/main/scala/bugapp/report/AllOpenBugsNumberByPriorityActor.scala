@@ -1,7 +1,7 @@
 package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 
 /**
   * @author Alexander Kuleshov
@@ -16,7 +16,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
           <all-open-bugs>
             <prioritized-bugs/>
           </all-open-bugs>
-         owner ! ReportDataResponse(ReportData(reportId, reportParams(ReportParams.ReportType).asInstanceOf[String], data))
+         owner ! ReportDataResponse(reportId, data)
   }
 }
 

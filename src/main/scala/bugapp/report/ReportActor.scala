@@ -6,7 +6,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
-import bugapp.report.ReportDataBuilder.{GetReportData, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{GetReportData, ReportData}
 import bugapp.report.ReportGenerator.{GenerateReport, ReportGenerated}
 import bugapp.repository.BugRepository
 
@@ -18,13 +18,14 @@ import scala.collection.mutable
 class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) extends Actor with ActorLogging with ReportConfig {
   import bugapp.report.ReportActor._
 
-  implicit val ec = context.dispatcher
+  private implicit val ec = context.dispatcher
 
   private val senders = mutable.Map.empty[String, ActorRef]
 
   private val pendingRequests = mutable.Set.empty[(GetReport, ActorRef)]
 
-  val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, self), "reportGenerator")
+  private val reportDataBuilders = mutable.Map.empty[String, ActorRef]
+  private val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, self), "reportGenerator")
 
   override def receive: Receive = reportManagement
 
@@ -40,6 +41,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
         bugsFuture.foreach { bugs =>
           val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
+          reportDataBuilders += (reportId -> reportDataBuilder)
           val reportParams = Map[String, Any](
             ReportParams.ReportType -> reportType,
             ReportParams.StartDate -> startDate,
@@ -51,10 +53,12 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
         }
       }
 
-    case ReportDataResponse(data) =>
-      val template = reportTemplate(data.reportType)
-      sender ! PoisonPill
-      reportBuilder ! GenerateReport(data.reportId, template, data.result)
+    case ReportData(reportId, reportType, result) =>
+      val template = reportTemplate(reportType)
+      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
+        reportDataBuilder ! PoisonPill
+      }
+      reportBuilder ! GenerateReport(reportId, template, result)
 
     case ReportGenerated(report) =>
       senders.remove(report.reportId) match {
@@ -79,10 +83,12 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
     case request: GetReport => pendingRequests.add((request, sender))
 
-    case ReportDataResponse(data) =>
-      val template = reportTemplate(data.reportType)
-      sender ! PoisonPill
-      reportBuilder ! GenerateReport(data.reportId, template, data.result)
+    case ReportData(reportId, reportType, result) =>
+      val template = reportTemplate(reportType)
+      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
+        reportDataBuilder ! PoisonPill
+      }
+      reportBuilder ! GenerateReport(reportId, template, result)
 
     case ReportGenerated(report) =>
       senders.remove(report.reportId) match {

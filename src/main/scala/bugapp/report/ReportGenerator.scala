@@ -24,8 +24,9 @@ class ReportGenerator(fopConf: String, reportActor: ActorRef) extends Actor with
       try {
         val output = reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate))
 
-        UtilsIO.write(report(), output)
-        log.debug("Report report.pdf saved")
+        val reportName = report(reportTemplate)
+        UtilsIO.write(reportName, output)
+        log.debug(s"Report $reportName created")
 
         reportActor ! ReportGenerated(Report(reportId, output))
       } catch {
@@ -56,5 +57,6 @@ object ReportGenerator {
     new ByteArrayInputStream(outputStream.toByteArray)
   }
 
-  def report(): String = s"report${reportDateFormat.format(LocalDate.now)}.pdf"
+  def report(template: String): String =
+    s"${template.split("\\.")(0)}${reportDateFormat.format(LocalDate.now)}.pdf"
 }

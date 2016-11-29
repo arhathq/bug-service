@@ -1,7 +1,7 @@
 package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import bugapp.report.ReportDataBuilder.{ReportData, ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 
 /**
   * @author Alexander Kuleshov
@@ -14,7 +14,7 @@ class ReportersBugNumberByThisWeekActor(owner: ActorRef) extends Actor with Acto
       val data =
           <reporter-bugs-by-this-week/>
 
-      owner ! ReportDataResponse(ReportData(reportId, reportParams(ReportParams.ReportType).asInstanceOf[String], data))
+      owner ! ReportDataResponse(reportId, data)
   }
 }
 
