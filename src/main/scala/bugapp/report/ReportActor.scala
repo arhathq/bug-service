@@ -15,7 +15,7 @@ import scala.collection.mutable
 /**
   * @author Alexander Kuleshov
   */
-class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) extends Actor with ActorLogging with ReportConfig {
+class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) extends Actor with ActorLogging with ReportConfig {
   import bugapp.report.ReportActor._
 
   private implicit val ec = context.dispatcher
@@ -47,7 +47,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
             ReportParams.StartDate -> startDate,
             ReportParams.EndDate -> endDate,
             ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
-            ReportParams.WeekPeriod -> weekPeriod
+            ReportParams.WeekPeriod -> weekPeriod,
+            ReportParams.ExcludedComponents -> excludedComponents
           )
           reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
         }
@@ -115,7 +116,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 }
 
 object ReportActor {
-  def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus) = Props(classOf[ReportActor], bugRepository, repositoryEventBus)
+  def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
+    Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 
@@ -129,4 +131,5 @@ object ReportParams {
   val EndDate = "endDate"
   val BugtrackerUri = "bugtrackerUri"
   val WeekPeriod = "weekPeriod"
+  val ExcludedComponents = "excludedComponents"
 }

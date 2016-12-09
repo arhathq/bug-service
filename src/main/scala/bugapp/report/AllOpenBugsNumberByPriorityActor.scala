@@ -15,6 +15,8 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
+      val excludedComponents: Seq[String] = reportParams(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
+
       val elements: Seq[(String, Int)] =
         Seq(
           ("period1", 1), ("period2", 2), ("period3", 3),
@@ -27,6 +29,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
               {prioritizedBugsElem(Metrics.P2Priority, elements.map(e => (e._1, e._2 - 1)))}
               {prioritizedBugsElem(Metrics.P3Priority, elements.map(e => (e._1, e._2 * 2)))}
               {prioritizedBugsElem(Metrics.NPPriority, elements.map(e => (e._1, 0)))}
+              <excludedComponents>{excludedComponents.mkString("\'", "\', \'", "\'")}</excludedComponents>
             </all-open-bugs>
 
          owner ! ReportDataResponse(reportId, data)

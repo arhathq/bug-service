@@ -32,7 +32,7 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   private val bugRepository = new BugzillaRepository(bugzillaActor)
 
-  private val reportActor = system.actorOf(ReportActor.props(bugRepository, repositoryEventBus), "reportActor")
+  private val reportActor = system.actorOf(ReportActor.props(bugRepository, repositoryEventBus, excludedComponents ++ excludedProducts), "reportActor")
   repositoryEventBus.subscribe(reportActor, RepositoryEventBus.RequestType)
 
   private val restService = new RestApiService(bugRepository, reportActor)

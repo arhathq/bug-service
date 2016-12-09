@@ -67,6 +67,7 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
   def buildReportData(reportId: String): ReportData = {
     val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[String]
+    val excludedComponents = requests(reportId)(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
     data.get(reportId) match {
       case Some(dataList) =>
@@ -81,12 +82,19 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
             </report-header>
             {reportData}
             <report-footer>
-              <note>* Bugs "CRF Hot Deploy - Prod DB", "Ecomm Deploy - Prod DB", "Dataload Failed", "New Files Arrived", "Data Consistency" excluded from report</note>
+              <note>{createNote(excludedComponents)}</note>
             </report-footer>
           </bug-reports>
 
         ReportData(reportId, reportType, result)
     }
+  }
+
+  def createNote(excludedComponents: Seq[String]): String = {
+    if (excludedComponents.nonEmpty)
+      s"* Bugs ${excludedComponents.mkString("\"", "\", \"", "\"")} excluded from report"
+    else
+      ""
   }
 }
 

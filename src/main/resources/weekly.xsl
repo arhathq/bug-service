@@ -6,14 +6,16 @@
   <xsl:template match="bug-reports">
     <fo:root xmlns:fo="http://www.w3.org/1999/XSL/Format">
       <fo:layout-master-set>
-        <fo:simple-page-master master-name="simpleA4" page-height="29.7cm" page-width="21cm" margin-top="2cm" margin-bottom="1cm" margin-left="2cm" margin-right="1cm">
+        <fo:simple-page-master master-name="simpleA4" page-height="29.7cm" page-width="21cm" margin-top="1cm" margin-bottom="1cm" margin-left="1.5cm" margin-right=".5cm">
           <fo:region-body region-name="xsl-region-body" margin="0.5cm" margin-top="3cm"/>
           <fo:region-before region-name="xsl-region-before" margin="0.5cm" extent="3cm" display-align="before" />
+          <fo:region-after region-name="xsl-region-after" margin="0.5cm" display-align="after" extent="3cm"/>
         </fo:simple-page-master>
       </fo:layout-master-set>
 
       <fo:page-sequence master-reference="simpleA4">
         <xsl:apply-templates select="report-header"/>
+        <xsl:apply-templates select="report-footer"/>
         <fo:flow flow-name="xsl-region-body">
           <fo:block/>
           <xsl:apply-templates select="all-open-bugs"/>
@@ -24,6 +26,7 @@
 
       <fo:page-sequence master-reference="simpleA4">
         <xsl:apply-templates select="report-header"/>
+        <xsl:apply-templates select="report-footer"/>
         <fo:flow flow-name="xsl-region-body">
           <fo:block/>
           <xsl:apply-templates select="reporter-bugs-by-15-weeks"/>
@@ -36,6 +39,7 @@
 
       <fo:page-sequence master-reference="simpleA4">
         <xsl:apply-templates select="report-header"/>
+        <xsl:apply-templates select="report-footer"/>
         <fo:flow flow-name="xsl-region-body">
           <xsl:apply-templates select="week-summary-report"/>
           <fo:block id='end'/>
@@ -58,13 +62,20 @@
     </fo:static-content>
   </xsl:template>
 
+  <xsl:template match="report-footer">
+    <fo:static-content flow-name="xsl-region-after">
+      <fo:block font-size="8pt" font-style="italic" text-align="center" space-after="5mm" color="black">
+        <fo:block><xsl:value-of select="note"/></fo:block>
+      </fo:block>
+    </fo:static-content>
+  </xsl:template>
 
   <xsl:template match="all-open-bugs">
     <fo:block font-size="12pt" font-weight="bold">All Open Production Bugs *</fo:block>
     <fo:block font-size="10pt">
       <fo:table width="100%" border-collapse="collapse">
         <fo:table-header color="white" background-color="#5b9bd5">
-          <fo:table-cell border="solid .5px black" padding="1em" width="3cm">
+          <fo:table-cell border="solid .5px black" padding="1em" width="4cm">
             <fo:block text-align="justify" font-weight="bold">Priority</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
@@ -94,7 +105,9 @@
         </fo:table-body>
       </fo:table>
       <fo:block font-size="8pt" text-align="right">* As of <xsl:value-of select="format-dateTime(//report-header/date, '[FNn], [D]-[MN,*-3]-[Y], [h]:[m01][PN] [z]', 'en', (), ())"/></fo:block>
-      <fo:block font-size="8pt" text-align="right">** Excluding CRF Hot Deploys, EComm Hot Deploys, `Dataload Failed`, `New Files Arrived` and `Data Consistency` Reports</fo:block>
+      <xsl:if test="excludedComponents != ''">
+        <fo:block font-size="8pt" text-align="right">** Excluding <xsl:value-of select="excludedComponents"/> Reports</fo:block>
+      </xsl:if>
     </fo:block>
     <fo:block text-align="center">
       <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
@@ -162,7 +175,7 @@
           <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="1.5cm">
             <fo:block>Priority</fo:block>
           </fo:table-cell>
-          <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="8cm">
+          <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="9cm">
             <fo:block>Summary</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" padding-left=".5em" padding-right=".5em" width="2cm">

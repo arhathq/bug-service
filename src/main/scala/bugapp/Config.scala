@@ -1,5 +1,6 @@
 package bugapp
 
+import collection.JavaConverters._
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.{Config => TypesafeConfig}
 
@@ -54,8 +55,8 @@ trait BugzillaConfig extends Config {
   val fetchTimeout = bugzillaConfig.getInt("fetch-timeout")
 
   val environment = bugzillaConfig.getString("environment")
-  val excludedProducts = bugzillaConfig.getStringList("excludedProducts")
-  val excludedComponents = bugzillaConfig.getStringList("excludedComponents")
+  val excludedProducts = bugzillaConfig.getStringList("excludedProducts").asScala
+  val excludedComponents = bugzillaConfig.getStringList("excludedComponents").asScala
 }
 
 trait AkkaConfig extends Config {
