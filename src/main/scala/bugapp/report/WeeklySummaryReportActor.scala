@@ -12,7 +12,13 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-        <week-summary-report/>
+        <week-summary-report>
+          <bugs-count>
+            <table>
+              <row/>
+            </table>
+          </bugs-count>
+        </week-summary-report>
 
       owner ! ReportDataResponse(reportId, data)
   }

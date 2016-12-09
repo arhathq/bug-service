@@ -12,7 +12,10 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogg
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-        <open-bugs-by-product/>
+        <open-bugs-by-product>
+          <product-bugs/>
+        </open-bugs-by-product>
+
 
       owner ! ReportDataResponse(reportId, data)
   }

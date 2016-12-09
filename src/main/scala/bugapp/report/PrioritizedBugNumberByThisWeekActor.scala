@@ -12,7 +12,9 @@ class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends Actor with Ac
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-        <priority-bugs-by-this-week/>
+        <priority-bugs-by-this-week>
+          <priority-bugs/>
+        </priority-bugs-by-this-week>
 
       owner ! ReportDataResponse(reportId, data)
   }

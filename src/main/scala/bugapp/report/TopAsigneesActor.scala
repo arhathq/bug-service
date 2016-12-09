@@ -12,7 +12,9 @@ class TopAsigneesActor(owner: ActorRef) extends Actor with ActorLogging {
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-        <top-asignees/>
+        <top-asignees>
+          <asignee/>
+        </top-asignees>
 
       owner ! ReportDataResponse(reportId, data)
   }

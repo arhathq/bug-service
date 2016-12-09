@@ -12,7 +12,9 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef) extends Actor with ActorL
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-          <reporter-bugs-by-15-weeks/>
+          <reporter-bugs-by-15-weeks>
+            <reporter-bugs/>
+          </reporter-bugs-by-15-weeks>
 
       owner ! ReportDataResponse(reportId, data)
   }

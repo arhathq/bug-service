@@ -13,7 +13,9 @@ class OpenTopBugListActor (owner: ActorRef) extends Actor with ActorLogging {
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val data =
-        <open-bugs/>
+        <open-bugs>
+          <bug/>
+        </open-bugs>
 
       owner ! ReportDataResponse(reportId, data)
   }
