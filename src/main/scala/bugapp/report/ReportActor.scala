@@ -1,6 +1,7 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
@@ -116,6 +117,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 }
 
 object ReportActor {
+  private[report] val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
+
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)

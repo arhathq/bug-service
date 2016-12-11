@@ -85,8 +85,6 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
 }
 
 object SlaReportActor {
-  private[report] val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
-
   def props(owner: ActorRef) = Props(classOf[SlaReportActor], owner)
 
   val bugsForPeriod: (Bug, OffsetDateTime) => Boolean = (bug, startDate) => {

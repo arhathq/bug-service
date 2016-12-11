@@ -80,6 +80,7 @@ object Metrics {
   val P1Priority = "P1"
   val P2Priority = "P2"
   val P3Priority = "P3"
+  val P4Priority = "P4"
   val NPPriority = "NP"
 
   val InvalidStatus = "Invalid"
@@ -90,7 +91,8 @@ object Metrics {
   val ResolvedIn6Days = "2-6 days"
   val ResolvedIn30Days = "6-30 days"
   val ResolvedIn90Days = "30-90 days"
-  val ResolvedInMoreThan90Days = " > 90 days"
+  val ResolvedIn365Days = "91-365 days"
+  val ResolvedInMoreThan365Days = " > 1 year"
 
   val resolvedStatuses = List("RESOLVED", "VERIFIED", "CLOSED")
   val resolvedResolutions = List("INVALID", "WORKSFORME", "DUPLICATE", "WONTFIX")
@@ -137,11 +139,12 @@ object Metrics {
       case _ => passSla = false
     }
 
-    var resolvedPeriod = ResolvedInMoreThan90Days
+    var resolvedPeriod = ResolvedInMoreThan365Days
     if (daysOpen < 3)  resolvedPeriod = ResolvedIn2Days
     else if (daysOpen < 7)  resolvedPeriod = ResolvedIn6Days
     else if (daysOpen < 31) resolvedPeriod = ResolvedIn30Days
     else if (daysOpen < 91) resolvedPeriod = ResolvedIn90Days
+    else if (daysOpen < 365) resolvedPeriod = ResolvedIn365Days
 
     (daysOpen, resolvedPeriod, passSla)
   }
