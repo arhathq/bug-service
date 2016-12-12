@@ -121,6 +121,9 @@ object ReportActor {
 
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
+
+  def formatNumber(number: Int): String = if (number == 0) "" else number.toString
+
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 

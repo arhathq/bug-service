@@ -77,3 +77,10 @@ trait ReportConfig extends Config {
   val reportTemplate: (String) => String = (reportType) => reportTypes(reportType)("template").asInstanceOf[String]
 
 }
+
+trait EmployeeConfig extends Config {
+
+  private val employeeConfig = config.getConfig("employees")
+
+  val repositoryPath = employeeConfig.getString("path")
+}

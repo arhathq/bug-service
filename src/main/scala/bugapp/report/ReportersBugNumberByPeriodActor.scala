@@ -2,11 +2,12 @@ package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.repository.EmployeeRepository
 
 /**
   * @author Alexander Kuleshov
   */
-class ReportersBugNumberByPeriodActor(owner: ActorRef) extends Actor with ActorLogging {
+class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepository) extends Actor with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {
@@ -21,5 +22,5 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef) extends Actor with ActorL
 }
 
 object ReportersBugNumberByPeriodActor {
-  def props(owner: ActorRef) = Props(classOf[ReportersBugNumberByPeriodActor], owner)
+  def props(owner: ActorRef, repository: EmployeeRepository) = Props(classOf[ReportersBugNumberByPeriodActor], owner, repository)
 }

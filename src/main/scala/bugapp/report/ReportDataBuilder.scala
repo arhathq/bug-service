@@ -2,7 +2,7 @@ package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
-import bugapp.repository.Bug
+import bugapp.repository.{Bug, FileEmployeeRepository}
 
 import scala.collection.mutable
 import scala.xml.Elem
@@ -17,12 +17,14 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   private val requests = mutable.Map.empty[String, Map[String, Any]]
   private val data = mutable.Map.empty[String, List[Elem]]
 
+  private val employeeRepository = new FileEmployeeRepository
+
   def createWorkers(reportType: String): Set[ActorRef] = reportType match {
     case "weekly" => Set(
       context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
       context.actorOf(OpenTopBugListActor.props(self)),
-      context.actorOf(ReportersBugNumberByPeriodActor.props(self)),
-      context.actorOf(ReportersBugNumberByThisWeekActor.props(self)),
+      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository)),
+      context.actorOf(ReportersBugNumberByThisWeekActor.props(self, employeeRepository)),
       context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
       context.actorOf(OpenBugsNumberByProductActor.props(self)),
       context.actorOf(BugsByPeriodChartActor.props(self)),
