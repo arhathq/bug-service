@@ -18,7 +18,7 @@ class ReportersBugNumberByThisWeekActor(owner: ActorRef, repository: EmployeeRep
     case ReportDataRequest(reportId, reportParams, bugs) =>
 
       val departmentBugs: Map[String, Map[String, Seq[Bug]]] = bugs.groupBy {bug =>
-        repository.getEmployee(bug.reporter).getOrElse(Employee(bug.reporter, "Unknown")).department
+        repository.getEmployee(bug.reporter).getOrElse(Employee(bug.reporter, "Other")).department
       }.map { tuple =>
         val department = tuple._1
         val bugs = tuple._2
