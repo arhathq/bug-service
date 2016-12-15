@@ -19,7 +19,8 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val excludedComponents: Seq[String] = reportParams(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
-      val prioritizedOpenBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.priority)
+      val openBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus)
+      val prioritizedOpenBugs = openBugs.groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
       val p3OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P3Priority, Seq())
@@ -28,18 +29,21 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
 
       val data =
           <all-open-bugs>
-            { prioritizedBugsElem(Metrics.P1Priority, splitBugsByOpenPeriod(p1OpenBugs).map(tuple => tuple._1 -> tuple._2.length)) }
-            { prioritizedBugsElem(Metrics.P2Priority, splitBugsByOpenPeriod(p2OpenBugs).map(tuple => tuple._1 -> tuple._2.length)) }
-            { prioritizedBugsElem(Metrics.P3Priority, splitBugsByOpenPeriod(p3OpenBugs).map(tuple => tuple._1 -> tuple._2.length)) }
-            { prioritizedBugsElem(Metrics.P4Priority, splitBugsByOpenPeriod(p4OpenBugs).map(tuple => tuple._1 -> tuple._2.length)) }
-            { prioritizedBugsElem(Metrics.NPPriority, splitBugsByOpenPeriod(npOpenBugs).map(tuple => tuple._1 -> tuple._2.length)) }
+            { prioritizedBugsElem(Metrics.P1Priority, p1OpenBugs) }
+            { prioritizedBugsElem(Metrics.P2Priority, p2OpenBugs) }
+            { prioritizedBugsElem(Metrics.P3Priority, p3OpenBugs) }
+            { prioritizedBugsElem(Metrics.P4Priority, p4OpenBugs) }
+            { prioritizedBugsElem(Metrics.NPPriority, npOpenBugs) }
+            {prioritizedBugsElem("Grand Total", openBugs)}
             <excludedComponents>{excludedComponents.mkString("\'", "\', \'", "\'")}</excludedComponents>
           </all-open-bugs>
 
        owner ! ReportDataResponse(reportId, data)
   }
 
-  def prioritizedBugsElem(priority: String, data: Seq[(String, Int)]): Elem = {
+  def prioritizedBugsElem(priority: String, bugs: Seq[Bug]): Elem = {
+    val data = splitBugsByOpenPeriod(bugs).map(tuple => tuple._1 -> tuple._2.length)
+
     <prioritized-bugs>
       <priority>{priority}</priority>
       {data.map(tuple => Elem.apply(null, s"${tuple._1}", Null, TopScope, true, Text(tuple._2.toString)))}

@@ -371,7 +371,7 @@
       <fo:table width="100%" border-collapse="collapse">
         <fo:table-header background-color="#ddebf7" font-weight="bold" border-bottom="solid .5px #9cc2e5" text-align="right">
           <fo:table-cell width="5cm" padding-left=".5em" padding-top=".5em">
-            <fo:block text-align="left">Department</fo:block>
+            <fo:block text-align="left">Priority</fo:block>
           </fo:table-cell>
           <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
             <fo:block>CLOSED</fo:block>
@@ -395,14 +395,14 @@
 
   <xsl:template match="priority-bugs-by-this-week/priority-bugs">
     <fo:table-row>
-      <xsl:if test="reporter = 'Grand Total'">
+      <xsl:if test="priority = 'Grand Total'">
         <xsl:attribute name="font-weight">bold</xsl:attribute>
         <xsl:attribute name="background-color">#ddebf7</xsl:attribute>
         <xsl:attribute name="border-top">solid .5px #9cc2e5</xsl:attribute>
       </xsl:if>
       <fo:table-cell text-align="left" padding-left=".5em" padding-top=".5em">
         <fo:block>
-          <xsl:value-of select="reporter"/>
+          <xsl:value-of select="priority"/>
         </fo:block>
       </fo:table-cell>
       <fo:table-cell padding-right=".5em" padding-top=".5em">

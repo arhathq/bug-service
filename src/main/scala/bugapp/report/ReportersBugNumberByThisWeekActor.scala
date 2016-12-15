@@ -1,5 +1,7 @@
 package bugapp.report
 
+import java.time.OffsetDateTime
+
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
@@ -17,7 +19,12 @@ class ReportersBugNumberByThisWeekActor(owner: ActorRef, repository: EmployeeRep
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
 
-      val departmentBugs: Map[String, Map[String, Seq[Bug]]] = bugs.groupBy {bug =>
+      val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
+      val startDate = endDate.minusWeeks(1)
+
+      val weeklyBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
+
+      val departmentBugs: Map[String, Map[String, Seq[Bug]]] = weeklyBugs.groupBy {bug =>
         repository.getEmployee(bug.reporter).getOrElse(Employee(bug.reporter, "Other")).department
       }.map { tuple =>
         val department = tuple._1

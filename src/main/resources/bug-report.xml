@@ -135,35 +135,35 @@
     </reporter-bugs-by-this-week>
     <priority-bugs-by-this-week>
         <priority-bugs>
-            <reporter>not prioritized</reporter>
+            <priority>not prioritized</priority>
             <closed>2</closed>
             <invalid/>
             <opened>1</opened>
             <total>3</total>
         </priority-bugs>
         <priority-bugs>
-            <reporter>P1</reporter>
+            <priority>P1</priority>
             <closed>1</closed>
             <invalid/>
             <opened>1</opened>
             <total>2</total>
         </priority-bugs>
         <priority-bugs>
-            <reporter>P2</reporter>
+            <priority>P2</priority>
             <closed>6</closed>
             <invalid>6</invalid>
             <opened>8</opened>
             <total>20</total>
         </priority-bugs>
         <priority-bugs>
-            <reporter>P3</reporter>
+            <priority>P3</priority>
             <closed/>
             <invalid>1</invalid>
             <opened>2</opened>
             <total>3</total>
         </priority-bugs>
         <priority-bugs>
-            <reporter>Grand Total</reporter>
+            <priority>Grand Total</priority>
             <closed>9</closed>
             <invalid>7</invalid>
             <opened>12</opened>

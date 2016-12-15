@@ -16,7 +16,7 @@ class TopAssigneesActor(owner: ActorRef) extends Actor with ActorLogging {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val bugsByAssignee = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.assignee)
 
-      val topBugAssignees = bugsByAssignee.map(tuple => (tuple._1, tuple._2.length)).toSeq.sortWith(_._2 > _._2)
+      val topBugAssignees = bugsByAssignee.map(tuple => (tuple._1, tuple._2.length)).toSeq.sortWith(_._2 > _._2).take(15)
 
       val data =
         <top-asignees>
