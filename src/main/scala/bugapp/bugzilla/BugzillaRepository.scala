@@ -25,6 +25,10 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
   QuartzSchedulerExtension(s).schedule("bugzillaActor", bugzillaActor, GetData)
 
+  def getBugs: Future[Seq[Bug]] = {
+    getBugs(bug => bug.environment == environment)
+  }
+
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
     getBugs(bug => bug.opened.isAfter(fromDate) && bug.environment == environment)
   }

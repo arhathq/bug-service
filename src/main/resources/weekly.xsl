@@ -29,8 +29,8 @@
         <xsl:apply-templates select="report-footer"/>
         <fo:flow flow-name="xsl-region-body">
           <fo:block/>
-          <xsl:apply-templates select="reporter-bugs-by-15-weeks"/>
-          <xsl:apply-templates select="reporter-bugs-by-this-week"/>
+          <xsl:apply-templates select="reporter-bugs-by-weeks-15"/>
+          <xsl:apply-templates select="reporter-bugs-by-weeks-1"/>
           <xsl:apply-templates select="priority-bugs-by-this-week"/>
           <xsl:apply-templates select="open-bugs-by-product"/>
           <xsl:apply-templates select="top-asignees"/>
@@ -239,7 +239,7 @@
     </fo:block>
   </xsl:template>
 
-  <xsl:template match="reporter-bugs-by-15-weeks">
+  <xsl:template match="reporter-bugs-by-weeks-15">
     <fo:block font-size="12pt" font-weight="bold" space-before="1.5em" space-after=".5em">Last 15 Weeks - Bugs By Reporter’s Department:</fo:block>
     <fo:block font-size="10pt">
       <fo:table width="100%" border-collapse="collapse">
@@ -267,7 +267,7 @@
     </fo:block>
   </xsl:template>
 
-  <xsl:template match="reporter-bugs-by-15-weeks/reporter-bugs">
+  <xsl:template match="reporter-bugs-by-weeks-15/reporter-bugs">
     <fo:table-row>
       <xsl:if test="reporter = 'Grand Total'">
         <xsl:attribute name="font-weight">bold</xsl:attribute>
@@ -302,7 +302,7 @@
     </fo:table-row>
   </xsl:template>
 
-  <xsl:template match="reporter-bugs-by-this-week">
+  <xsl:template match="reporter-bugs-by-weeks-1">
     <fo:block font-size="12pt" font-weight="bold" space-before="1.5em" space-after=".5em">This Week Bugs by Reporter’s Department:</fo:block>
     <fo:block font-size="10pt">
       <fo:table width="100%" border-collapse="collapse">
@@ -330,7 +330,7 @@
     </fo:block>
   </xsl:template>
 
-  <xsl:template match="reporter-bugs-by-this-week/reporter-bugs">
+  <xsl:template match="reporter-bugs-by-weeks-1/reporter-bugs">
     <fo:table-row>
       <xsl:if test="reporter = 'Grand Total'">
         <xsl:attribute name="font-weight">bold</xsl:attribute>

@@ -38,7 +38,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
       else {
         val reportId = newReportId
         senders += reportId -> sender
-        val bugsFuture = bugRepository.getBugs(startDate)
+        val bugsFuture = bugRepository.getBugs
 
         bugsFuture.foreach { bugs =>
           val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))

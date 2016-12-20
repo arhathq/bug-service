@@ -23,8 +23,8 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
     case "weekly" => Set(
       context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
       context.actorOf(OpenTopBugListActor.props(self)),
-      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository)),
-      context.actorOf(ReportersBugNumberByThisWeekActor.props(self, employeeRepository)),
+      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 15)),
+      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 1)),
       context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
       context.actorOf(OpenBugsNumberByProductActor.props(self)),
       context.actorOf(BugsByPeriodChartActor.props(self)),

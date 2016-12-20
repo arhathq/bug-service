@@ -5,6 +5,8 @@ import java.time.OffsetDateTime
 import scala.concurrent.Future
 
 trait BugRepository {
+  def getBugs: Future[Seq[Bug]]
+
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]]
 
   def getBugHistory(bugId: List[Int]): Seq[BugHistory]

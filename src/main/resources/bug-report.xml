@@ -87,7 +87,7 @@
             <product>Main Site</product>
         </bug>
     </open-bugs>
-    <reporter-bugs-by-15-weeks>
+    <reporter-bugs-by-weeks-15>
         <reporter-bugs>
             <reporter>Department 1</reporter>
             <closed>112</closed>
@@ -109,8 +109,8 @@
             <opened>16</opened>
             <total>338</total>
         </reporter-bugs>
-    </reporter-bugs-by-15-weeks>
-    <reporter-bugs-by-this-week>
+    </reporter-bugs-by-weeks-15>
+    <reporter-bugs-by-weeks-1>
         <reporter-bugs>
             <reporter>Department 1</reporter>
             <closed>5</closed>
@@ -132,7 +132,7 @@
             <opened>6</opened>
             <total>17</total>
         </reporter-bugs>
-    </reporter-bugs-by-this-week>
+    </reporter-bugs-by-weeks-1>
     <priority-bugs-by-this-week>
         <priority-bugs>
             <priority>not prioritized</priority>

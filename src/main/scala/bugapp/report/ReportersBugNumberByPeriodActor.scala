@@ -1,23 +1,30 @@
 package bugapp.report
 
+import java.time.OffsetDateTime
+
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.{Bug, Employee, EmployeeRepository}
 
-import scala.xml.Elem
+import scala.xml._
 
 /**
   * @author Alexander Kuleshov
   */
-class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepository) extends Actor with ActorLogging {
+class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepository, weeks: Int) extends Actor with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
 
-      val departmentBugs: Map[String, Map[String, Seq[Bug]]] = bugs.groupBy {bug =>
+      val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
+      val startDate = endDate.minusWeeks(weeks)
+
+      val weeklyBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
+
+      val departmentBugs: Map[String, Map[String, Seq[Bug]]] = weeklyBugs.groupBy {bug =>
         repository.getEmployee(bug.reporter).getOrElse(Employee(bug.reporter, "Other")).department
       }.map { tuple =>
         val department = tuple._1
@@ -32,7 +39,7 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
         val invalidBugsNumber = bugs.getOrElse(Metrics.InvalidStatus, Seq()).length
         val openedBugsNumber = bugs.getOrElse(Metrics.OpenStatus, Seq()).length
         reporterBugsElem(department, closedBugsNumber, invalidBugsNumber, openedBugsNumber)
-      }
+      }.toSeq
 
       val totalBugNumber = departmentBugs.map { tuple =>
         val bugs = tuple._2
@@ -43,10 +50,9 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
 
       val data =
-        <reporter-bugs-by-15-weeks>
-          {reporterBugsElems}
-          {reporterBugsElem("Grand Total", totalBugNumber._1, totalBugNumber._2, totalBugNumber._3)}
-        </reporter-bugs-by-15-weeks>
+        Elem.apply(null, s"reporter-bugs-by-weeks-$weeks", Null, TopScope, true,
+          Group(reporterBugsElems),
+          reporterBugsElem("Grand Total", totalBugNumber._1, totalBugNumber._2, totalBugNumber._3))
 
       owner ! ReportDataResponse(reportId, data)
   }
@@ -63,5 +69,5 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
 }
 
 object ReportersBugNumberByPeriodActor {
-  def props(owner: ActorRef, repository: EmployeeRepository) = Props(classOf[ReportersBugNumberByPeriodActor], owner, repository)
+  def props(owner: ActorRef, repository: EmployeeRepository, weeks: Int) = Props(classOf[ReportersBugNumberByPeriodActor], owner, repository, weeks)
 }
