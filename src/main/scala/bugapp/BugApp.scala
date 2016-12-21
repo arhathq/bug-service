@@ -39,7 +39,13 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   log.debug("Starting App...")
 
-  Http().bindAndHandle(restService.routes, httpHost, httpPort)
+  Http().bindAndHandle(restService.routes, httpHost, httpPort).
+    recover {
+      case t: Throwable =>
+        log.error("Error occurred during start. Stopping App...", t)
+        system.terminate
+        System.exit(0)
+    }
 
   def toDate: OffsetDateTime = OffsetDateTime.now
 
