@@ -2,7 +2,8 @@ package bugapp.report
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
-import bugapp.repository.{Bug, FileEmployeeRepository}
+import bugapp.report.ReportActor.ReportData
+import bugapp.repository.Bug
 
 import scala.collection.mutable
 import scala.xml.Elem
@@ -17,31 +18,12 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
   private val requests = mutable.Map.empty[String, Map[String, Any]]
   private val data = mutable.Map.empty[String, List[Elem]]
 
-  private val employeeRepository = new FileEmployeeRepository
-
-  def createWorkers(reportType: String): Set[ActorRef] = reportType match {
-    case "weekly" => Set(
-      context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
-      context.actorOf(OpenTopBugListActor.props(self)),
-      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 15)),
-      context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 1)),
-      context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
-      context.actorOf(OpenBugsNumberByProductActor.props(self)),
-      context.actorOf(BugsByPeriodChartActor.props(self)),
-      context.actorOf(TopAssigneesActor.props(self)),
-      context.actorOf(WeeklySummaryReportActor.props(self))
-    )
-    case "sla" => Set(
-      context.actorOf(SlaReportActor.props(self)),
-      context.actorOf(BugsOutSlaActor.props(self))
-    )
-    case _ => Set()
-  }
+  private val reportWorkers = new ReportWorkers(context)
 
   override def receive: Receive = {
     case GetReportData(reportId, reportParams, bugs) =>
       val reportType: String = reportParams(ReportParams.ReportType).asInstanceOf[String]
-      val workers = createWorkers(reportType)
+      val workers = reportWorkers.create(reportType)
       jobs += reportId -> workers
       requests += reportId -> reportParams
       log.info(s"Job [$reportId], Workers $jobs")
@@ -102,7 +84,6 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
 object ReportDataBuilder {
   case class GetReportData(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
-  case class ReportData(reportId: String, reportType: String, result: Elem)
 
   case class ReportDataRequest(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
   case class ReportDataResponse(reportId: String, result: Elem)

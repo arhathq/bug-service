@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.UtilsIO
-import bugapp.report.ReportActor.ReportError
+import bugapp.report.ReportActor.{ReportError, ReportGenerated, Report}
 
 import scala.xml.{Elem, XML}
 
@@ -40,9 +40,6 @@ object ReportGenerator {
   private val reportDateFormat = DateTimeFormatter.ofPattern("uuuuMMdd")
 
   case class GenerateReport(reportId: String, reportTemplate: String, source: Elem)
-  case class ReportGenerated(report: Report)
-
-  case class Report(reportId: String, data: Array[Byte])
 
   def props(fopConf: String, reportActor: ActorRef) =
     Props(classOf[ReportGenerator], fopConf, reportActor)

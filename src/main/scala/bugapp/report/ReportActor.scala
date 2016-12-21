@@ -7,11 +7,12 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
-import bugapp.report.ReportDataBuilder.{GetReportData, ReportData}
-import bugapp.report.ReportGenerator.{GenerateReport, ReportGenerated}
+import bugapp.report.ReportDataBuilder.GetReportData
+import bugapp.report.ReportGenerator.GenerateReport
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
+import scala.xml.Elem
 
 /**
   * @author Alexander Kuleshov
@@ -55,24 +56,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
         }
       }
 
-    case ReportData(reportId, reportType, result) =>
-      val template = reportTemplate(reportType)
-      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
-        reportDataBuilder ! PoisonPill
-      }
-      reportBuilder ! GenerateReport(reportId, template, result)
-
-    case ReportGenerated(report) =>
-      senders.remove(report.reportId) match {
-        case Some(sender) => sender ! ReportResult(Some(report.data))
-        case None =>
-      }
-
-    case ReportError(reportId, message) =>
-      senders.remove(reportId) match {
-        case Some(sender) => sender ! ReportResult(report = None, error = Some(message))
-        case None =>
-      }
+    case evt: ReportEvent => handleReportEvent(evt)
 
     case RepositoryEventBus.UpdateRequired =>
       log.debug("Switching to System Management Mode")
@@ -81,28 +65,11 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
   }
 
-  def systemManagement: Receive = { //TODO: update duplicated code
+  def systemManagement: Receive = {
 
     case request: GetReport => pendingRequests.add((request, sender))
 
-    case ReportData(reportId, reportType, result) =>
-      val template = reportTemplate(reportType)
-      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
-        reportDataBuilder ! PoisonPill
-      }
-      reportBuilder ! GenerateReport(reportId, template, result)
-
-    case ReportGenerated(report) =>
-      senders.remove(report.reportId) match {
-        case Some(sender) => sender ! ReportResult(Some(report.data))
-        case None =>
-      }
-
-    case ReportError(reportId, message) =>
-      senders.remove(reportId) match {
-        case Some(sender) => sender ! ReportResult(report = None, error = Some(message))
-        case None =>
-      }
+    case evt: ReportEvent => handleReportEvent(evt)
 
     case RepositoryEventBus.UpdateCompleted =>
       log.debug("Switching to Report Mode")
@@ -114,6 +81,28 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
   }
 
   def newReportId: String = UUID.randomUUID().toString
+
+  private def handleReportEvent(event: ReportEvent) = event match {
+    case ReportData(reportId, reportType, result) =>
+      val template = reportTemplate(reportType)
+      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
+        reportDataBuilder ! PoisonPill
+      }
+      reportBuilder ! GenerateReport(reportId, template, result)
+
+    case ReportGenerated(report) =>
+      senders.remove(report.reportId) match {
+        case Some(sender) => sender ! ReportResult(Some(report.data))
+        case None =>
+      }
+
+    case ReportError(reportId, message) =>
+      senders.remove(reportId) match {
+        case Some(sender) => sender ! ReportResult(report = None, error = Some(message))
+        case None =>
+      }
+
+  }
 }
 
 object ReportActor {
@@ -127,7 +116,12 @@ object ReportActor {
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
 
-  case class ReportError(reportId: String, message: String)
+  trait ReportEvent
+  case class ReportData(reportId: String, reportType: String, result: Elem) extends ReportEvent
+  case class ReportGenerated(report: Report) extends ReportEvent
+  case class ReportError(reportId: String, message: String) extends ReportEvent
+
+  case class Report(reportId: String, data: Array[Byte])
 }
 
 object ReportParams {
