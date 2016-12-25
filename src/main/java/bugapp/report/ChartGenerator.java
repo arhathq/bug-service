@@ -182,7 +182,7 @@ public class ChartGenerator {
             <2015-40></2015-40>
         </Invalid>
      */
-    public String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
+    public static String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createAreaChart(
                 "Prod Support Bugs - Last 15 Weeks",
                 "", "Bug Count",

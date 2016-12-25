@@ -20,7 +20,7 @@ class ReportWorkers(context: ActorContext) {
       context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 1)),
       context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
       context.actorOf(OpenBugsNumberByProductActor.props(self)),
-      context.actorOf(BugsByPeriodChartActor.props(self)),
+      context.actorOf(BugsByPeriodChartActor.props(self, 15)),
       context.actorOf(TopAssigneesActor.props(self)),
       context.actorOf(WeeklySummaryReportActor.props(self))
     )
