@@ -282,7 +282,7 @@
             </fo:table-cell>
             <fo:table-cell padding-right=".5em" padding-top=".5em">
                 <fo:block>
-                    <xsl:value-of select="slaPercentage"/>
+                    <xsl:value-of select="format-number(slaPercentage, '#.00')"/>
                 </fo:block>
             </fo:table-cell>
             <fo:table-cell padding-right=".5em" padding-top=".5em">
