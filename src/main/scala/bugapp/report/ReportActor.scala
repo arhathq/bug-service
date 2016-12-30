@@ -12,7 +12,7 @@ import bugapp.report.ReportGenerator.GenerateReport
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
-import scala.xml.Elem
+import scala.xml.{Elem, Node, Null, TopScope}
 
 /**
   * @author Alexander Kuleshov
@@ -112,6 +112,7 @@ object ReportActor {
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
 
   def formatNumber(number: Int): String = if (number == 0) "" else number.toString
+  def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
 
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
   case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)

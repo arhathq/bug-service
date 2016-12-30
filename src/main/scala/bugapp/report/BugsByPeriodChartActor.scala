@@ -4,12 +4,13 @@ import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
+import bugapp.report.ReportActor.createXmlElement
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
-import scala.xml.{Elem, Group, Null, TopScope}
+import scala.xml._
 
 /**
   * @author Alexander Kuleshov
@@ -33,15 +34,6 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
         (week, bugs.groupBy(bug => bug.stats.status))
       }
 
-      val weeklyBugsElems = weeklyBugs.map { tuple =>
-        val week = tuple._1
-        val bugs = tuple._2
-        val closedBugsNumber = bugs.getOrElse(Metrics.FixedStatus, Seq()).length
-        val invalidBugsNumber = bugs.getOrElse(Metrics.InvalidStatus, Seq()).length
-        val openedBugsNumber = bugs.getOrElse(Metrics.OpenStatus, Seq()).length
-        weeklyBugsElem(week, closedBugsNumber, invalidBugsNumber, openedBugsNumber)
-      }.toSeq.sortWith((el1, el2) => el1.text < el2.text)
-
       val totalBugNumber = weeklyBugs.map { tuple =>
         val bugs = tuple._2
         val closedBugsNumber = bugs.getOrElse(Metrics.FixedStatus, Seq()).length
@@ -50,24 +42,45 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
         (closedBugsNumber, invalidBugsNumber, openedBugsNumber)
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
 
-      val data =
-        Elem.apply(null, s"bugs-by-weeks-$weeks", Null, TopScope, true,
-          Group(weeklyBugsElems),
-          weeklyBugsElem("Grand Total", totalBugNumber._1, totalBugNumber._2, totalBugNumber._3),
-          chartElem(weeklyBugs)
-        )
+      val data = createXmlElement(s"bugs-by-weeks-$weeks",
+        weeklyBugsElem(weeklyBugs),
+        chartElem(weeklyBugs)
+      )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def weeklyBugsElem(week: String, closed: Int, invalid: Int, opened: Int): Elem = {
-    <weekly-bugs>
-      <week>{week}</week>
-      <closed>{formatNumber(closed)}</closed>
-      <invalid>{formatNumber(invalid)}</invalid>
-      <opened>{formatNumber(opened)}</opened>
-      <total>{formatNumber(closed + invalid + opened)}</total>
-    </weekly-bugs>
+  private def weeklyBugsElem(bugs: Map[String, Map[String, Seq[Bug]]]): Elem = {
+    val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
+    val marksElem = createXmlElement("header", Group(marks.map(week => createXmlElement(s"w$week", Text(week)))))
+
+    val fixed = weeklyBugsData(Metrics.FixedStatus, marks, bugs)
+    val fixedElem = createXmlElement("row",
+      createXmlElement("name", Text("Closed")),
+      Group(fixed.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    )
+
+    val open = weeklyBugsData(Metrics.OpenStatus, marks, bugs)
+    val openElem = createXmlElement("row",
+      createXmlElement("name", Text("Open")),
+      Group(open.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    )
+
+    val invalid = weeklyBugsData(Metrics.InvalidStatus, marks, bugs)
+    val invalidElem = createXmlElement("row",
+      createXmlElement("name", Text("Invalid")),
+      Group(invalid.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    )
+
+    createXmlElement("weekly-bugs", marksElem, fixedElem, openElem, invalidElem)
+  }
+
+  private def weeklyBugsData(priority: String, marks: Seq[String], bugs: Map[String, Map[String, Seq[Bug]]]): Seq[(String, Int)] = {
+    marks.map { mark =>
+      val bugsByStatus = bugs.getOrElse(mark, Map())
+      val bugsNumber = bugsByStatus.getOrElse(priority, Seq()).length
+      (mark, bugsNumber)
+    }
   }
 
   private def chartElem(bugs: Map[String, Map[String, Seq[Bug]]]): Elem = {
@@ -76,11 +89,9 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
     marks.foreach { mark =>
       val bugsByStatus = bugs.getOrElse(mark, Map())
-      bugsByStatus.foreach { tuple =>
-        val status = tuple._1
-        val bugs = tuple._2
-        dataSet.addValue(bugs.length, status, mark)
-      }
+      dataSet.addValue(bugsByStatus.getOrElse(Metrics.FixedStatus, Seq()).length, "Closed", mark)
+      dataSet.addValue(bugsByStatus.getOrElse(Metrics.OpenStatus, Seq()).length, "Open", mark)
+      dataSet.addValue(bugsByStatus.getOrElse(Metrics.InvalidStatus, Seq()).length, "Invalid", mark)
     }
     <image>
       <content-type>image/jpeg</content-type>

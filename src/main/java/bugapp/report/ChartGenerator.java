@@ -5,6 +5,7 @@ import org.jfree.chart.ChartColor;
 import org.jfree.chart.ChartFactory;
 import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
+import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.NumberAxis;
 import org.jfree.chart.encoders.EncoderUtil;
 import org.jfree.chart.encoders.ImageFormat;
@@ -15,16 +16,16 @@ import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.renderer.AreaRendererEndType;
 import org.jfree.chart.renderer.category.*;
+import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.category.CategoryDataset;
 import org.jfree.data.category.DefaultCategoryDataset;
+import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
 import java.io.File;
-import java.util.Arrays;
-import java.util.List;
 
 /**
  * @author Alexander Kuleshov
@@ -123,6 +124,25 @@ public class ChartGenerator {
                 true, true, false
         );
 
+        CategoryPlot plot = (CategoryPlot) chart.getPlot();
+
+        plot.setRenderer(new StackedBarRenderer3D(24, 24));
+        BarRenderer3D renderer = (BarRenderer3D) plot.getRenderer();
+
+        renderer.setBarPainter(new StandardBarPainter());
+
+        renderer.setBaseItemLabelsVisible(true);
+        renderer.setBaseItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+
+        renderer.setSeriesItemLabelFont(0, new java.awt.Font("SansSerif", Font.BOLD, 14));
+        renderer.setSeriesItemLabelFont(1, new java.awt.Font("SansSerif", Font.BOLD, 14));
+
+        renderer.setSeriesItemLabelPaint(0, Color.black);
+        renderer.setSeriesItemLabelPaint(1, Color.black);
+
+        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
+        renderer.setSeriesPositiveItemLabelPosition(1, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
+
         return toBase64(chartToBytes(640, 480, chart));
     }
 
@@ -182,7 +202,8 @@ public class ChartGenerator {
             <2015-40></2015-40>
         </Invalid>
      */
-    public static String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
+
+    public static byte[] generateBugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createAreaChart(
                 "Prod Support Bugs - Last 15 Weeks",
                 "", "Bug Count",
@@ -190,14 +211,36 @@ public class ChartGenerator {
                 true, true, false
         );
 
-        CategoryPlot plot = (CategoryPlot) chart.getPlot();
-        AreaRenderer renderer = (AreaRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, Color.cyan);
-        renderer.setSeriesPaint(1, Color.white);
-        renderer.setSeriesPaint(2, Color.pink);
-        renderer.setEndType(AreaRendererEndType.TRUNCATE);
+        LegendTitle legend = chart.getLegend();
+        legend.setPosition(RectangleEdge.RIGHT);
 
-        return toBase64(chartToBytes(640, 480, chart));
+        CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.setForegroundAlpha(0.8f);
+
+        plot.setNoDataMessage("No data to display");
+
+        final CategoryAxis domainAxis = plot.getDomainAxis();
+        domainAxis.setLowerMargin(0.0);
+        domainAxis.setUpperMargin(0.0);
+        domainAxis.setTickLabelsVisible(false);
+
+        // change the auto tick unit selection to integer units only...
+        final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+
+        AreaRenderer renderer = (AreaRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, ChartColor.LIGHT_BLUE);
+        renderer.setSeriesPaint(1, ChartColor.LIGHT_RED);
+        renderer.setSeriesPaint(2, ChartColor.DARK_GRAY);
+        renderer.setEndType(AreaRendererEndType.TAPER);
+
+        renderer.setBaseItemLabelsVisible(true);
+
+        return chartToBytes(1024, 600, chart);
+    }
+
+    public static String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
+        return toBase64(generateBugsFromLast15Weeks(dataset));
     }
 
     /*
@@ -262,23 +305,6 @@ public class ChartGenerator {
 
         System.out.println(generateBase64OpenHighPriorityBugs(openHighPriorityBugs));
 
-        String open = "Open";
-        String closed = "Closed";
-        String invalid = "Invalid";
-
-        int[] openBugs =    new int[] {11, 13, 7, 24, 9, 17, 8, 9, 10, 7, 6, 10, 8, 7, 11};
-        int[] closedBugs =  new int[] { 7,  2, 5, 21, 5, 14, 7, 9,  6, 6, 3,  8, 6, 6,  9};
-        int[] invalidBugs = new int[] { 0,  1, 0,  2, 2,  2, 1, 0,  4, 1, 2,  1, 1, 0,  2};
-        List<String> weeks = Arrays.asList("2015-25", "2015-26", "2015-27", "2015-28", "2015-29", "2015-30", "2015-31", "2015-32", "2015-33", "2015-34", "2015-35", "2015-36", "2015-37", "2015-38", "2015-39");
-
-        DefaultCategoryDataset bugsFromLast15Weeks = new DefaultCategoryDataset();
-
-        for(int i = 0; i < weeks.size(); i++) {
-            bugsFromLast15Weeks.addValue(openBugs[i], open, weeks.get(i));
-            bugsFromLast15Weeks.addValue(closedBugs[i], closed, weeks.get(i));
-            bugsFromLast15Weeks.addValue(invalidBugs[i], invalid, weeks.get(i));
-        }
-        System.out.println(chartGenerator.generateBase64BugsFromLast15Weeks(bugsFromLast15Weeks));
 
         String[] days = new String[] {"2015-06-01", "2015-06-02", "2015-06-03", "2015-06-04", "2015-06-05", "2015-06-06", "2015-06-07"};
         int[] newBugs = new int[] {11, 13, 7, 24, 9, 17, 8};

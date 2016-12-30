@@ -45,6 +45,8 @@ libraryDependencies ++= {
 
     "org.scala-lang.modules" %% "scala-async"                       % scalaAsyncVersion,
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
-    "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test"
+    "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test",
+
+    "junit"                   % "junit"                             % "4.11"               % "test"
   )
 }

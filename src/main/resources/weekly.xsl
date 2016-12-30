@@ -109,7 +109,7 @@
         <fo:block font-size="8pt" text-align="right">** Excluding <xsl:value-of select="excludedComponents"/> Reports</fo:block>
       </xsl:if>
     </fo:block>
-    <fo:block text-align="center">
+    <fo:block text-align="center" margin-top="1cm">
       <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
     </fo:block>
   </xsl:template>
@@ -237,27 +237,19 @@
     <fo:block text-align="center">
       <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
     </fo:block>
-    <fo:block font-size="12pt" font-weight="bold" space-before="1.5em" space-after=".5em">Last 15 Weeks - Bugs By Week:</fo:block>
-    <fo:block font-size="10pt">
+    <fo:block font-size="6pt" space-before="0" margin-top="0">
       <fo:table width="100%" border-collapse="collapse">
-        <fo:table-header background-color="#ddebf7" font-weight="bold" border-bottom="solid 0.5px #9cc2e5" text-align="right">
-          <fo:table-cell width="5cm" padding-left=".5em" padding-top=".5em">
-            <fo:block text-align="left">Week</fo:block>
+        <fo:table-header border="solid .5px black" text-align="center">
+          <fo:table-cell border="solid .5px black" width="1cm" padding-left=".5em" padding-top=".5em">
+            <fo:block/>
           </fo:table-cell>
-          <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
-            <fo:block>CLOSED</fo:block>
-          </fo:table-cell>
-          <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
-            <fo:block>INVALID</fo:block>
-          </fo:table-cell>
-          <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
-            <fo:block>OPEN</fo:block>
-          </fo:table-cell>
-          <fo:table-cell width="3cm" padding-right=".5em" padding-top=".5em">
-            <fo:block>Grand Total</fo:block>
-          </fo:table-cell>
+          <xsl:for-each select="weekly-bugs/header/*">
+            <fo:table-cell border="solid .5px black" width=".99cm" padding-left=".5em" padding-top=".5em">
+              <fo:block text-align="left"><xsl:value-of select="."/></fo:block>
+            </fo:table-cell>
+          </xsl:for-each>
         </fo:table-header>
-        <fo:table-body text-align="right">
+        <fo:table-body text-align="center">
           <xsl:apply-templates select="weekly-bugs"/>
         </fo:table-body>
       </fo:table>
@@ -265,38 +257,24 @@
   </xsl:template>
 
   <xsl:template match="bugs-by-weeks-15/weekly-bugs">
-    <fo:table-row>
-      <xsl:if test="week = 'Grand Total'">
-        <xsl:attribute name="font-weight">bold</xsl:attribute>
-        <xsl:attribute name="background-color">#ddebf7</xsl:attribute>
-        <xsl:attribute name="border-top">solid 0.5px #9cc2e5</xsl:attribute>
-      </xsl:if>
-      <fo:table-cell text-align="left" padding-left=".5em" padding-top=".5em">
-        <fo:block>
-          <xsl:value-of select="week"/>
-        </fo:block>
-      </fo:table-cell>
-      <fo:table-cell padding-right="0.5em" padding-top=".5em">
-        <fo:block>
-          <xsl:value-of select="closed"/>
-        </fo:block>
-      </fo:table-cell>
-      <fo:table-cell padding-right="0.5em" padding-top=".5em">
-        <fo:block>
-          <xsl:value-of select="invalid"/>
-        </fo:block>
-      </fo:table-cell>
-      <fo:table-cell padding-right="0.5em" padding-top=".5em">
-        <fo:block>
-          <xsl:value-of select="opened"/>
-        </fo:block>
-      </fo:table-cell>
-      <fo:table-cell padding-right="0.5em" padding-top=".5em">
-        <fo:block>
-          <xsl:value-of select="total"/>
-        </fo:block>
-      </fo:table-cell>
-    </fo:table-row>
+    <xsl:for-each select="row">
+      <fo:table-row>
+        <fo:table-cell text-align="left" border="solid .5px black" padding-left=".5em" padding-top=".5em">
+          <fo:block>
+            <xsl:value-of select="name"/>
+          </fo:block>
+        </fo:table-cell>
+        <xsl:for-each select="./*">
+          <xsl:if test="name() = 'value'">
+            <fo:table-cell border="solid .5px black" padding-left=".5em" padding-top=".5em">
+              <fo:block>
+                <xsl:value-of select="."/>
+              </fo:block>
+            </fo:table-cell>
+          </xsl:if>
+        </xsl:for-each>
+      </fo:table-row>
+    </xsl:for-each>
   </xsl:template>
 
   <xsl:template match="reporter-bugs-by-weeks-15">
