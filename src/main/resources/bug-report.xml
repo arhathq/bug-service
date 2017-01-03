@@ -234,6 +234,7 @@
             <from>60</from>
             <to>70</to>
             <high-priotity-bugs>15</high-priotity-bugs>
+            <blocked-bugs>0</blocked-bugs>
         </production-queue>
         <period>
             <from>2015-09-24T16:00:00.00+01:00</from>

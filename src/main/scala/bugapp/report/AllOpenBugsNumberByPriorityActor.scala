@@ -60,7 +60,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
   }
 
   def allOpenBugsChart(endDate: OffsetDateTime, bugs: Seq[Bug]): String = {
-    val marks = bugs.groupBy(bug => bug.stats.openMonth).filter(tuple => tuple._2.nonEmpty).keys.toSeq
+    val marks = bugs.groupBy(bug => bug.stats.openMonth).filter(tuple => tuple._2.nonEmpty).keys.toSeq.reverse
     val dataSet = new DefaultCategoryDataset()
     allOpenBugsChartData(Metrics.P1Priority, marks, bugs.filter(bug => bug.priority == Metrics.P1Priority)).foreach(data => dataSet.addValue(data._1, data._2, data._3))
     allOpenBugsChartData(Metrics.P2Priority, marks, bugs.filter(bug => bug.priority == Metrics.P2Priority)).foreach(data => dataSet.addValue(data._1, data._2, data._3))

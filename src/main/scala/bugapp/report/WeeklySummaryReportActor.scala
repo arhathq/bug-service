@@ -34,7 +34,7 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
           {productionQueueElem()}
           {periodElem(endDate.minusDays(7), endDate)}
           {weekSummaryChart(endDate, bugs)}
-          {statisticsElem()}
+          {weeklyStatisticsElem()}
           <bugs-count>
             <period>{weeks}</period>
             {tableElem(bugsForCurrentWeek, bugsForLast15Week)}
@@ -77,16 +77,17 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     </table>
   }
 
-  private def productionQueueElem(): Elem = {
+  private def productionQueueElem(): Elem = { //todo: Implement
     <production-queue>
       <state>not changed</state>
       <from>0</from>
       <to>0</to>
       <high-priotity-bugs>0</high-priotity-bugs>
+      <blocked-bugs>0</blocked-bugs>
     </production-queue>
   }
 
-  private def statisticsElem(): Elem = {
+  private def weeklyStatisticsElem(): Elem = { //todo: Implement
     <statistics>
       <new>0</new>
       <reopened>0</reopened>
@@ -136,8 +137,8 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
 
     val marks = Metrics.daysRange(startDate, date)
 
-    weekSummaryChartData(Metrics.FixedStatus, marks, lastResolvedAndOpenedBugs, (b: Bug) => b.changed.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
     weekSummaryChartData(Metrics.OpenStatus, marks, lastResolvedAndOpenedBugs, (b: Bug) => b.opened.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
+    weekSummaryChartData(Metrics.FixedStatus, marks, lastResolvedAndOpenedBugs, (b: Bug) => b.changed.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
 
     <image>
       <content-type>image/jpeg</content-type>

@@ -104,7 +104,7 @@
           <xsl:apply-templates select="prioritized-bugs"/>
         </fo:table-body>
       </fo:table>
-      <fo:block font-size="8pt" text-align="right">* As of <xsl:value-of select="format-dateTime(//report-header/date, '[FNn], [D]-[MN,*-3]-[Y], [h]:[m01][PN] [z]', 'en', (), ())"/></fo:block>
+      <fo:block font-size="8pt" text-align="right" space-before="1em">* As of <xsl:value-of select="format-dateTime(//report-header/date, '[FNn], [D]-[MN,*-3]-[Y], [h]:[m01][PN] [z]', 'en', (), ())"/></fo:block>
       <xsl:if test="excludedComponents != ''">
         <fo:block font-size="8pt" text-align="right">** Excluding <xsl:value-of select="excludedComponents"/> Reports</fo:block>
       </xsl:if>
@@ -163,7 +163,6 @@
       </fo:table-cell>
     </fo:table-row>
   </xsl:template>
-
 
   <xsl:template match="open-bugs">
     <fo:block font-size="10pt" space-after=".5cm" space-before=".5cm" margin-left="0">
@@ -234,25 +233,27 @@
   </xsl:template>
 
   <xsl:template match="bugs-by-weeks-15">
-    <fo:block text-align="center">
-      <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
-    </fo:block>
-    <fo:block font-size="6pt" space-before="0" margin-top="0">
-      <fo:table width="100%" border-collapse="collapse">
-        <fo:table-header border="solid .5px black" text-align="center">
-          <fo:table-cell border="solid .5px black" width="1cm" padding-left=".5em" padding-top=".5em">
-            <fo:block/>
-          </fo:table-cell>
-          <xsl:for-each select="weekly-bugs/header/*">
-            <fo:table-cell border="solid .5px black" width=".99cm" padding-left=".5em" padding-top=".5em">
-              <fo:block text-align="left"><xsl:value-of select="."/></fo:block>
-            </fo:table-cell>
-          </xsl:for-each>
-        </fo:table-header>
-        <fo:table-body text-align="center">
-          <xsl:apply-templates select="weekly-bugs"/>
-        </fo:table-body>
-      </fo:table>
+    <fo:block>
+        <fo:block text-align="center" keep-with-next.within-page="always">
+            <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
+        </fo:block>
+        <fo:block font-size="6pt" space-before="0" margin-top="0" keep-with-next.within-page="always">
+            <fo:table width="100%" border-collapse="collapse">
+                <fo:table-header border="solid .5px black" text-align="center">
+                    <fo:table-cell border="solid .5px black" width="1cm" padding-left=".5em" padding-top=".5em">
+                        <fo:block/>
+                    </fo:table-cell>
+                    <xsl:for-each select="weekly-bugs/header/*">
+                        <fo:table-cell border="solid .5px black" width=".99cm" padding-left=".5em" padding-top=".5em">
+                            <fo:block text-align="left"><xsl:value-of select="."/></fo:block>
+                        </fo:table-cell>
+                    </xsl:for-each>
+                </fo:table-header>
+                <fo:table-body text-align="center">
+                    <xsl:apply-templates select="weekly-bugs"/>
+                </fo:table-body>
+            </fo:table>
+        </fo:block>
     </fo:block>
   </xsl:template>
 
@@ -578,6 +579,9 @@
         <fo:list-item-label end-indent="label-end()"><fo:block>&#x2022;</fo:block></fo:list-item-label>
         <fo:list-item-body start-indent="body-start()">
           <fo:block>Production Queue size <xsl:value-of select="production-queue/state"/> from <xsl:value-of select="production-queue/from"/> to <fo:inline color="red"><xsl:value-of select="production-queue/to"/></fo:inline> bugs; P1/P2 queue is <xsl:value-of select="production-queue/high-priotity-bugs"/> bugs</fo:block>
+          <xsl:if test="production-queue/blocked-bugs!=''">
+            <fo:block margin-left="1.5em">- <xsl:value-of select="production-queue/blocked-bugs"/> bugs are BLOCKED</fo:block>
+          </xsl:if>
         </fo:list-item-body>
       </fo:list-item>
       <fo:list-item space-before="1.5em">
