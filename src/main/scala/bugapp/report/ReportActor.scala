@@ -106,7 +106,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 }
 
 object ReportActor {
-  private[report] val dateFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
+  private[report] val dateTimeFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
+  private[report] val dateFormat = DateTimeFormatter.ISO_LOCAL_DATE
 
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)

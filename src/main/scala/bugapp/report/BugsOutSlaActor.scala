@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportActor.dateFormat
+import bugapp.report.ReportActor.dateTimeFormat
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
@@ -62,10 +62,10 @@ class BugsOutSlaActor(owner: ActorRef) extends Actor with ActorLogging {
       <bug>
         <id>{bug.id}</id>
         <priority>{bug.priority}</priority>
-        <opened>{dateFormat.format(bug.opened)}</opened>
+        <opened>{dateTimeFormat.format(bug.opened)}</opened>
         <resolved>{
           bug.stats.resolvedTime match {
-            case Some(time) => dateFormat.format(time)
+            case Some(time) => dateTimeFormat.format(time)
             case None => ""
           }
           }</resolved>

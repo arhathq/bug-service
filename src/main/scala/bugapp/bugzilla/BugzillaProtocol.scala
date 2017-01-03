@@ -1,7 +1,7 @@
 package bugapp.bugzilla
 
 import java.time.format.{DateTimeFormatterBuilder, SignStyle}
-import java.time.temporal.{IsoFields, Temporal}
+import java.time.temporal.{ChronoUnit, IsoFields, Temporal}
 import java.time.{DayOfWeek, OffsetDateTime}
 
 import bugapp.Implicits._
@@ -165,6 +165,11 @@ object Metrics {
       }
     }
     (openedTime, resolvedTime, reopenedCount)
+  }
+
+  def daysRange(startDate: OffsetDateTime, endDate: OffsetDateTime): Seq[OffsetDateTime] = {
+    Iterator.iterate(startDate)(date => date.plus(1, ChronoUnit.DAYS)).
+      takeWhile(date => date.isBefore(endDate) || date.toLocalDate.isEqual(endDate.toLocalDate)).toSeq
   }
 
   val marks: (OffsetDateTime, Int) => Seq[String] = (date, weeks) => {

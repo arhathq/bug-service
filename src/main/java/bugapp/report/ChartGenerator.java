@@ -255,17 +255,33 @@ public class ChartGenerator {
             <2015-06-03>4</2015-06-03>
         </Resolved>
      */
-    public String generateBase64NewVsResolvedBugs(CategoryDataset dataset) throws Exception {
+    public static String generateBase64NewVsResolvedBugs(CategoryDataset dataset) throws Exception {
         JFreeChart chart = ChartFactory.createBarChart("", "", "", dataset, PlotOrientation.VERTICAL, true, true, false);
 
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.getRangeAxis().setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+
         BarRenderer renderer = (BarRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, Color.red);
-        renderer.setSeriesPaint(1, Color.green);
+        renderer.setSeriesPaint(0, ChartColor.VERY_LIGHT_RED);
+        renderer.setSeriesPaint(1, ChartColor.VERY_LIGHT_GREEN);
         renderer.setMaximumBarWidth(3.0);
         renderer.setItemMargin(0.0);
 
-        return toBase64(chartToBytes(640, 480, chart));
+        renderer.setBarPainter(new StandardBarPainter());
+
+        renderer.setBaseItemLabelsVisible(true);
+        renderer.setBaseItemLabelGenerator(new StandardCategoryItemLabelGenerator());
+
+        renderer.setSeriesItemLabelFont(0, new java.awt.Font("SansSerif", Font.BOLD, 14));
+        renderer.setSeriesItemLabelFont(1, new java.awt.Font("SansSerif", Font.BOLD, 14));
+
+        renderer.setSeriesItemLabelPaint(0, Color.black);
+        renderer.setSeriesItemLabelPaint(1, Color.black);
+
+        renderer.setSeriesPositiveItemLabelPosition(0, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
+        renderer.setSeriesPositiveItemLabelPosition(1, new ItemLabelPosition(ItemLabelAnchor.CENTER, TextAnchor.TOP_CENTER, TextAnchor.TOP_CENTER, 0));
+
+        return toBase64(chartToBytes(800, 600, chart));
     }
 
     private void saveChart(int width, int height, String filename, JFreeChart chart) throws Exception {

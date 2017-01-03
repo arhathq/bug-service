@@ -588,7 +588,7 @@
           <fo:block text-align="center">
             <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
           </fo:block>
-          <fo:block font-size="9">* Note: <xsl:value-of select="period/weekend1"/> and <xsl:value-of select="period/weekend2"/> are weekend days</fo:block>
+          <fo:block font-size="9">* Note: <xsl:value-of select="format-dateTime(period/weekend1, '[Y0001]-[M01]-[D01]')"/> and <xsl:value-of select="format-dateTime(period/weekend2, '[Y0001]-[M01]-[D01]')"/> are weekend days</fo:block>
           <fo:block space-before="1em">New Bugs Created: <fo:inline color="red"><xsl:value-of select="statistics/new"/></fo:inline></fo:block>
           <fo:block>Bugs Reopened: <fo:inline color="red"><xsl:value-of select="statistics/reopened"/></fo:inline></fo:block>
           <fo:block>Moved To Queue: <fo:inline color="red"><xsl:value-of select="statistics/moved"/></fo:inline></fo:block>
