@@ -39,7 +39,7 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogg
     val p1Count = data.getOrElse(Metrics.P1Priority, 0)
     val p2Count = data.getOrElse(Metrics.P2Priority, 0)
     val p3Count = data.getOrElse(Metrics.P3Priority, 0)
-    val npCount = data.getOrElse(Metrics.P4Priority, 0)
+    val npCount = data.getOrElse(Metrics.NPPriority, 0)
 
     <product-bugs>
       <product>{product}</product>

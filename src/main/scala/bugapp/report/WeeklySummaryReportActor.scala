@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor._
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-import bugapp.repository.Bug
+import bugapp.repository.{Bug, BugHistory}
 import org.jfree.data.category.DefaultCategoryDataset
 
 import scala.xml.{Elem, Group, Text}
@@ -23,18 +23,19 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
+      val startDate = endDate.minusDays(7)
       val weeks = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
 
-      val bugsForCurrentWeek = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(1)))
+      val bugsForCurrentWeek = bugs.filter(bug => bug.opened.isAfter(startDate))
       val bugsForLastWeek = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(2)) && bug.opened.isBefore(endDate.minusWeeks(1)))
       val bugsForLast15Week = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(15)))
 
       val data =
         <week-summary-report>
-          {productionQueueElem()}
-          {periodElem(endDate.minusDays(7), endDate)}
+          {productionQueueElem(bugs, startDate, endDate)}
+          {periodElem(startDate, endDate)}
           {weekSummaryChart(endDate, bugs)}
-          {weeklyStatisticsElem()}
+          {weeklyStatisticsElem(bugs, startDate, endDate)}
           <bugs-count>
             <period>{weeks}</period>
             {tableElem(bugsForCurrentWeek, bugsForLast15Week)}
@@ -44,13 +45,13 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def tableRowElem(line: String, closed: Double, open: Double, invalid: Double) = {
+  private def tableRowElem(line: String, closed: Double, open: Double, invalid: Double, total: Double) = {
     <row>
       <line>{line}</line>
       <invalid>{invalid}</invalid>
       <closed>{closed}</closed>
       <open>{open}</open>
-      <total>{open + closed + invalid}</total>
+      <total>{total}</total>
     </row>
   }
 
@@ -70,31 +71,48 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     val averageClosedBugNumber = average(totalClosedBugNumber, closedBugNumber)
     val averageInvalidBugNumber = average(totalInvalidBugNumber, invalidBugNumber)
 
+    val totalBugNumber = closedBugNumber + openedBugNumber + invalidBugNumber
+    val totalOfTotalBugNumber = totalClosedBugNumber + totalOpenedBugNumber + totalInvalidBugNumber
+    val totalAverageBugNumber = average(totalOfTotalBugNumber, totalBugNumber)
+
     <table>
-      {tableRowElem("Mark", closedBugNumber, openedBugNumber, invalidBugNumber)}
-      {tableRowElem("Average", averageClosedBugNumber, averageOpenedBugNumber, averageInvalidBugNumber)}
-      {tableRowElem("Total", totalClosedBugNumber, totalOpenedBugNumber, totalInvalidBugNumber)}
+      {tableRowElem("Mark", closedBugNumber, openedBugNumber, invalidBugNumber, totalBugNumber)}
+      {tableRowElem("Average", averageClosedBugNumber, averageOpenedBugNumber, averageInvalidBugNumber, totalAverageBugNumber)}
+      {tableRowElem("Total", totalClosedBugNumber, totalOpenedBugNumber, totalInvalidBugNumber, totalOfTotalBugNumber)}
     </table>
   }
 
-  private def productionQueueElem(): Elem = { //todo: Implement
+  private def productionQueueElem(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): Elem = {
+  val queueBugsCount = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
+  val highPriorityBugsCount = bugs.count { bug =>
+    bug.stats.status == Metrics.OpenStatus && (bug.priority == Metrics.P1Priority || bug.priority == Metrics.P2Priority)
+  }
+  val blockedBugsCount = bugs.count(bug => bug.status == "BLOCKED" && bug.stats.status == Metrics.OpenStatus)
     <production-queue>
-      <state>not changed</state>
+      <state>changed</state>
       <from>0</from>
-      <to>0</to>
-      <high-priotity-bugs>0</high-priotity-bugs>
-      <blocked-bugs>0</blocked-bugs>
+      <to>{queueBugsCount}</to>
+      <high-priotity-bugs>{highPriorityBugsCount}</high-priotity-bugs>
+      <blocked-bugs>{blockedBugsCount}</blocked-bugs>
     </production-queue>
   }
 
-  private def weeklyStatisticsElem(): Elem = { //todo: Implement
+  private def weeklyStatisticsElem(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): Elem = {
+    val newBugsCount = bugs.count(bug => bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate))
+    val reopenedBugsCount = bugs.count(bug => bug.status == "REOPENED" && bug.changed.isAfter(startDate))
+    val movedBugsCount = bugs.count(bug => bug.priority != "NP" && bug.changed.isAfter(startDate))
+    val resolvedBugsCount = bugs.count(bug => bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate))
+    val updatedBugsCount = bugs.count(bug => bug.changed.isAfter(startDate))
+    val totalBugCommentsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
+      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.count(item => item.when.isAfter(startDate))
+    )
     <statistics>
-      <new>0</new>
-      <reopened>0</reopened>
-      <moved>0</moved>
-      <resolved>0</resolved>
-      <bugs-updated>0</bugs-updated>
-      <total-comments>0</total-comments>
+      <new>{newBugsCount}</new>
+      <reopened>{reopenedBugsCount}</reopened>
+      <moved>{movedBugsCount}</moved>
+      <resolved>{resolvedBugsCount}</resolved>
+      <bugs-updated>{updatedBugsCount}</bugs-updated>
+      <total-comments>{totalBugCommentsCount}</total-comments>
     </statistics>
   }
 
@@ -150,5 +168,5 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
 object WeeklySummaryReportActor {
   def props(owner: ActorRef) = Props(classOf[WeeklySummaryReportActor], owner)
 
-  def average(v1: Int, v2: Int): Double = if (v2 == 0) 0.0 else v1 / v2
+  def average(v1: Int, v2: Int): Double = if (v2 == 0) 0.0 else v1.toDouble / v2
 }
