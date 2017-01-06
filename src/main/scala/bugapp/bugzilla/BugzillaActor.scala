@@ -72,6 +72,10 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
             }
           }
         }
+      }.recover {
+        case t: Throwable =>
+          log.error(t, s"Error during data load stream. State switches back to wait the new data load")
+          context.become(waitDataload())
       }
   }
 
@@ -232,6 +236,6 @@ object BugzillaActor {
       bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
       bug.product, bug.component, bug.cf_production.getOrElse(""), bug.summary, bug.platform,
-      createBugStats(bug, history))
+      Some(createHistory(history)), createBugStats(bug, history))
   }
 }

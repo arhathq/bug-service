@@ -53,7 +53,9 @@ case class BugzillaParams(Bugzilla_login: String,
                           Bugzilla_password: String,
                           creation_time: Option[OffsetDateTime] = None,
                           ids: Option[Seq[Int]] = None,
-                          cf_production: Option[String] = Some("Production")) {
+                          cf_production: Option[String] = Some("Production"),
+                          limit: Option[Int] = Some(0),
+                          offset: Option[Int] = Some(0)) {
   import io.circe.syntax._
 
   def toJsonString: String = List(this).asJson.pretty(implicitly)
