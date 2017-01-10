@@ -109,4 +109,104 @@ class CirceJsonTests extends FunSuite {
     println(arrayBugs.getOrElse(Array[Bar]()).length)
   }
 
+  test("Scala Collections to Json") {
+
+    import io.circe.generic.semiauto._
+    import io.circe.syntax._
+
+    case class Report(name: String, fields: MapValue)
+
+    trait ReportValue
+
+    case class ReportField(name: String, value: ReportValue) extends ReportValue
+
+    case class MapValue(fields: Seq[ReportField]) extends ReportValue
+
+    trait SimpleValue extends ReportValue
+    case class StringValue(value: String) extends SimpleValue
+    case class IntValue(value: Int) extends SimpleValue
+    case class BooleanValue(value: Boolean) extends SimpleValue
+    case class BigDecimalValue(value: BigDecimal) extends SimpleValue
+    case class NullValue() extends SimpleValue
+
+    case class ListValue(values: Seq[ReportValue]) extends ReportValue
+
+    val data = Map(
+      "all-open-bugs" -> Map(
+        "prioritized-bugs" -> Vector(
+          Map(
+            "priority" -> "P1",
+            "period1" -> 0,
+            "period2" -> 0,
+            "period3" -> 0,
+            "period4" -> 0,
+            "period5" -> true,
+            "period6" -> 0,
+            "total" -> 0
+          ),
+          Map(
+            "priority" -> "Grand Total",
+            "period1" -> 0,
+            "period2" -> 0,
+            "period3" -> 0,
+            "period4" -> 0,
+            "period5" -> 0,
+            "period6" -> 0,
+            "total" -> 0
+          )
+        ),
+        "excludedComponents" -> Vector("component1", "component2"),
+        "chart-data" -> Map(
+
+        )
+      )
+    )
+
+    val report = Report("all-open-bugs",
+      MapValue(
+        Seq(
+          ReportField("prioritized-bugs",
+            ListValue(
+              Seq(
+                MapValue(
+                  Seq(
+                    ReportField("priority", StringValue("P1")),
+                    ReportField("period1", IntValue(0)),
+                    ReportField("period2", IntValue(0))
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+
+    lazy implicit val reportEncoder: Encoder[Report] = Encoder.instance {
+      case Report(name, fields) => JsonC.obj((name, fields.asJson))
+    }
+    lazy implicit val reportFieldEncoder: Encoder[ReportField] = Encoder.instance {
+        case ReportField(name, value) => JsonC.obj((name, value.asJson))
+    }
+    lazy implicit val mapValueEncoder: Encoder[MapValue] = Encoder.instance {
+      case MapValue(fields) => JsonC.fromValues(fields.map(field => field.asJson))
+    }
+    lazy implicit val listValueEncoder: Encoder[ListValue] = Encoder.instance {
+      case ListValue(values) => JsonC.fromValues(values.map(value => value.asJson))
+    }
+    lazy implicit val intValueEncoder: Encoder[IntValue] = Encoder.instance {
+      case IntValue(value) => JsonC.fromInt(value)
+    }
+    lazy implicit val stringValueEncoder = deriveEncoder[StringValue]
+
+    lazy implicit val reportValueEncoder: Encoder[ReportValue] = Encoder.instance {
+      case ReportField(name, value) => JsonC.obj((name, value.asJson))
+      case mv: MapValue => mv.asJson
+      case ListValue(values) => values.asJson
+      case IntValue(value) => value.asJson
+      case StringValue(value) => value.asJson
+    }
+
+    println(report.asJson)
+  }
 }
