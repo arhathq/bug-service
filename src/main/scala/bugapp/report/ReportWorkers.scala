@@ -15,6 +15,7 @@ class ReportWorkers(context: ActorContext) {
   def create(reportType: String): Set[ActorRef] = reportType match {
     case "weekly" => Set(
       context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
+      context.actorOf(AllOpenBugsNumberByPriorityChartActor.props(self)),
       context.actorOf(OpenTopBugListActor.props(self)),
       context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 15)),
       context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 1)),
@@ -22,7 +23,8 @@ class ReportWorkers(context: ActorContext) {
       context.actorOf(OpenBugsNumberByProductActor.props(self)),
       context.actorOf(BugsByPeriodChartActor.props(self, 15)),
       context.actorOf(TopAssigneesActor.props(self)),
-      context.actorOf(WeeklySummaryReportActor.props(self))
+      context.actorOf(WeeklySummaryReportActor.props(self)),
+      context.actorOf(WeeklySummaryChartActor.props(self))
     )
     case "sla" => Set(
       context.actorOf(SlaReportActor.props(self)),

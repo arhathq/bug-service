@@ -19,6 +19,7 @@
         <fo:flow flow-name="xsl-region-body">
           <fo:block/>
           <xsl:apply-templates select="all-open-bugs"/>
+          <xsl:apply-templates select="all-open-bugs-chart"/>
           <xsl:apply-templates select="open-bugs"/>
           <xsl:apply-templates select="bugs-by-weeks-15"/>
         </fo:flow>
@@ -109,9 +110,6 @@
         <fo:block font-size="8pt" text-align="right">** Excluding <xsl:value-of select="excludedComponents"/> Reports</fo:block>
       </xsl:if>
     </fo:block>
-    <fo:block text-align="center" margin-top="1cm">
-      <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
-    </fo:block>
   </xsl:template>
 
   <xsl:template match="all-open-bugs/prioritized-bugs">
@@ -162,6 +160,12 @@
         </fo:block>
       </fo:table-cell>
     </fo:table-row>
+  </xsl:template>
+
+  <xsl:template match="/all-open-bugs-chart">
+    <fo:block text-align="center" margin-top="1cm">
+      <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
+    </fo:block>
   </xsl:template>
 
   <xsl:template match="open-bugs">
@@ -587,12 +591,7 @@
       <fo:list-item space-before="1.5em">
         <fo:list-item-label end-indent="label-end()"><fo:block>&#x2022;</fo:block></fo:list-item-label>
         <fo:list-item-body start-indent="body-start()">
-          <fo:block>Production Bugs Changes made after the previous report (between <xsl:value-of select="format-dateTime(period/from, '[Y0001]-[M01]-[D01] [H01]:[m01]:[s01]')"/> and <xsl:value-of select="format-dateTime(period/to, '[Y0001]-[M01]-[D01] [H01]:[m01]:[s01]')"/>)</fo:block>
-          <fo:block text-align="center">New bugs (red) vs. Resolved (green)</fo:block>
-          <fo:block text-align="center">
-            <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
-          </fo:block>
-          <fo:block font-size="9">* Note: <xsl:value-of select="format-dateTime(period/weekend1, '[Y0001]-[M01]-[D01]')"/> and <xsl:value-of select="format-dateTime(period/weekend2, '[Y0001]-[M01]-[D01]')"/> are weekend days</fo:block>
+          <xsl:apply-templates select="//week-summary-report-chart"/>
           <fo:block space-before="1em">New Bugs Created: <fo:inline color="red"><xsl:value-of select="statistics/new"/></fo:inline></fo:block>
           <fo:block>Bugs Reopened: <fo:inline color="red"><xsl:value-of select="statistics/reopened"/></fo:inline></fo:block>
           <fo:block>Moved To Queue: <fo:inline color="red"><xsl:value-of select="statistics/moved"/></fo:inline></fo:block>
@@ -632,6 +631,15 @@
         </fo:table-body>
       </fo:table>
     </fo:block>
+  </xsl:template>
+
+  <xsl:template match="week-summary-report-chart">
+    <fo:block>Production Bugs Changes made after the previous report (between <xsl:value-of select="format-dateTime(period/from, '[Y0001]-[M01]-[D01] [H01]:[m01]:[s01]')"/> and <xsl:value-of select="format-dateTime(period/to, '[Y0001]-[M01]-[D01] [H01]:[m01]:[s01]')"/>)</fo:block>
+    <fo:block text-align="center">New bugs (red) vs. Resolved (green)</fo:block>
+    <fo:block text-align="center">
+      <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
+    </fo:block>
+    <fo:block font-size="9">* Note: <xsl:value-of select="format-dateTime(period/weekend1, '[Y0001]-[M01]-[D01]')"/> and <xsl:value-of select="format-dateTime(period/weekend2, '[Y0001]-[M01]-[D01]')"/> are weekend days</fo:block>
   </xsl:template>
 
   <xsl:template match="week-summary-report/bugs-count/table/row">
