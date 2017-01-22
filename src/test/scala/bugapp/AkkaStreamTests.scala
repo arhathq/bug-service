@@ -8,18 +8,22 @@ import scala.concurrent._
 import scala.concurrent.duration._
 import java.nio.file.Paths
 
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.model.HttpMethods
 import akka.stream._
 import akka.stream.scaladsl._
+import bugapp.BugApp.{akkaConfig, bugzillaUrl}
 import bugapp.bugzilla._
 import bugapp.repository._
 import bugapp.Implicits._
+import bugapp.http.HttpClient
 import de.knutwalker.akka.stream.support.CirceStreamSupport
 import org.scalatest.FunSuite
 
 /**
   *
   */
-class AkkaStreamTests extends FunSuite {
+class AkkaStreamTests extends FunSuite with AkkaConfig {
 
   test("Simple Stream") {
     implicit val system = ActorSystem()
@@ -37,6 +41,57 @@ class AkkaStreamTests extends FunSuite {
         .runWith(FileIO.toPath(Paths.get("factorials.txt")))
 
   }
+
+  test("Stream sequence") {
+    implicit val system = ActorSystem()
+    implicit val ec = system.dispatcher
+    implicit val materializer = ActorMaterializer()
+
+    val source = Source(1 to 10)
+    val sink = Sink.seq[Int]
+
+    source.filter { value =>
+      println(s"Filter value $value")
+      value % 2 == 0
+    }. map { value =>
+      println(s"Map value $value")
+      throw new RuntimeException("re")
+      value * 2
+    }.reduce { (v1, v2) =>
+      println(s"Reduce value $v2")
+      v1 + v2
+    }.runWith(sink).
+      recover {
+      case t: RuntimeException =>
+        println(s"Error $t")
+        List(1, 2)
+    }.andThen {
+      case v: Any =>
+        println(s"Result $v")
+    }
+
+
+  }
+
+  test("Custom source") {
+    implicit val system = ActorSystem()
+    implicit val ec = system.dispatcher
+    implicit val materializer = ActorMaterializer()
+
+    // A GraphStage is a proper Graph, just like what GraphDSL.create would return
+    val sourceGraph: Graph[SourceShape[String], NotUsed] = new BugzillaSource(10)
+
+    // Create a Source from the Graph to access the DSL
+    val source: Source[String, NotUsed] = Source.fromGraph(sourceGraph)
+
+    val result1: Future[String] = source.take(10).runFold("")(_ + _ + "\n")
+    println(Await.result(result1, 20.seconds))
+
+    val result2: Future[String] = source.take(10).runFold("q")(_ + _ + "\n")
+    println(Await.result(result2, 20.seconds))
+
+  }
+
 /*
   test("File to File streaming") {
     implicit val system = ActorSystem()
