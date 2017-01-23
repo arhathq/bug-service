@@ -5,8 +5,8 @@ import java.time.OffsetDateTime
 import java.time.temporal.IsoFields
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import akka.http.scaladsl.model.{HttpMethods, Uri}
-import akka.stream.{ActorMaterializer, ActorMaterializerSettings, IOResult, Supervision}
+import akka.http.scaladsl.model.HttpMethods
+import akka.stream._
 import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, Source}
 import akka.util.ByteString
 import bugapp.{BugApp, BugzillaConfig, UtilsIO}
@@ -56,10 +56,9 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       val currentWeek = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
       log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$endDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
 
-      val data = loadData(startDate)
       val rawFile = rootPath + "/bugzilla.json.tmp"
 
-      loadHistoryStream(data, rawFile, bugsFilter).map { result =>
+      loadHistoryStream(rawFile, bugsFilter).map { result =>
         if (result.wasSuccessful) {
           log.debug(s"File $rawFile created")
           val repoFile = rootPath + "/" + repositoryFile + ".tmp"
@@ -69,8 +68,14 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
             if (transformationResult.wasSuccessful) {
               log.debug(s"File $repoFile created")
               senders.foreach(sender => sender ! DataReady(repoFile))
+            } else {
+              log.debug(s"File $repoFile was not created")
+              context.become(waitDataload())
             }
           }
+        } else {
+          log.debug(s"File $rawFile was not created")
+          context.become(waitDataload())
         }
       }.recover {
         case t: Throwable =>
@@ -108,10 +113,11 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
       repositoryEventBus.publish(RepositoryEventBus.UpdateCompletedEvent())
   }
 
-  def loadHistoryStream(source: Future[String], destination: String, f: (BugzillaBug) => Boolean, batchSize: Int = 200, parallelism: Int = 8): Future[IOResult] = {
-    Source.fromFuture(source).map(source => ByteString(source)).
+  def loadHistoryStream(destination: String, f: (BugzillaBug) => Boolean, batchSize: Int = 200, parallelism: Int = 8): Future[IOResult] = {
+      Source.fromGraph(new BugzillaSource(limit = bugLimit)(context.system)).
       via(decode[BugzillaResponse[BugzillaResult]]).
       map(response => response.result.get.bugs).
+      takeWhile(bugs => bugs.nonEmpty).
       mapConcat(identity).
       filter(f).
       grouped(batchSize).
@@ -160,7 +166,7 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
   def loadData(startDate: OffsetDateTime): Future[String] = {
     val params = BugzillaParams(bugzillaUsername, bugzillaPassword, startDate)
     val request = BugzillaRequest("Bug.search", params)
-    httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)
+    httpClient.execute[String](BugzillaRequest.jsonrpc(bugzillaUrl, request), HttpMethods.GET)
   }
 
   /**
@@ -169,7 +175,7 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
   def loadHistory(ids: Seq[Int]): Future[String] = {
     val params = BugzillaParams(bugzillaUsername, bugzillaPassword, ids = Some(ids))
     val request = BugzillaRequest("Bug.history", params)
-    httpClient.execute[String](BugzillaActor.uri(bugzillaUrl, request), HttpMethods.GET)
+    httpClient.execute[String](BugzillaRequest.jsonrpc(bugzillaUrl, request), HttpMethods.GET)
   }
 
 }
@@ -184,17 +190,6 @@ object BugzillaActor {
 
   private def fileSink(filename: String): Sink[String, Future[IOResult]] =
     Flow[String].map(s => ByteString(s)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
-
-  private def uri(bugzillaUrl: String, request: BugzillaRequest): Uri = {
-    Uri(bugzillaUrl).
-      withPath(Uri.Path("/jsonrpc.cgi")).
-      withQuery(Uri.Query(
-        Map(
-          "method" -> request.method,
-          "params" -> request.params.toJsonString
-        )
-      ))
-  }
 
   val createItemChange: (BugzillaHistoryChange) => HistoryItemChange = item => {
     HistoryItemChange(item.removed, item.added, item.field_name)

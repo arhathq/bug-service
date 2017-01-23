@@ -1,5 +1,7 @@
 package bugapp
 
+import java.time.OffsetDateTime
+
 import collection.JavaConverters._
 import com.typesafe.config.ConfigFactory
 import com.typesafe.config.{Config => TypesafeConfig}
@@ -49,6 +51,8 @@ trait BugzillaConfig extends Config {
   val bugzillaUsername = bugzillaConfig.getString("username")
   val bugzillaPassword = bugzillaConfig.getString("password")
 
+  val searchStartDate = OffsetDateTime.parse(bugzillaConfig.getString("start-date"))
+  val bugLimit = bugzillaConfig.getInt("bug-limit")
   val fetchPeriod = bugzillaConfig.getInt("fetch-period-in-weeks")
   val rootPath = bugzillaConfig.getString("repository-path")
   val repositoryFile = bugzillaConfig.getString("repository-file")

@@ -66,6 +66,20 @@ object BugzillaParams {
 }
 
 case class BugzillaRequest(method: String, params: BugzillaParams)
+object BugzillaRequest {
+  import akka.http.scaladsl.model.Uri
+
+  def jsonrpc(bugzillaUrl: String, request: BugzillaRequest): Uri = {
+    Uri(bugzillaUrl).
+      withPath(Uri.Path("/jsonrpc.cgi")).
+      withQuery(Uri.Query(
+        Map(
+          "method" -> request.method,
+          "params" -> request.params.toJsonString
+        )
+      ))
+  }
+}
 case class BugzillaResponse[T](error: Option[BugzillaError], id: String, result: Option[T])
 case class BugzillaError(message: String, code: Int)
 case class BugzillaResult(bugs: List[BugzillaBug])

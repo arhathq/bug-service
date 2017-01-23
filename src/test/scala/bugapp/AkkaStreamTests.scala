@@ -1,29 +1,25 @@
 package bugapp
 
-import akka.{Done, NotUsed}
+import akka.NotUsed
 import akka.actor.ActorSystem
 import akka.util.ByteString
 
 import scala.concurrent._
 import scala.concurrent.duration._
 import java.nio.file.Paths
+import java.time.OffsetDateTime
 
-import akka.http.scaladsl.Http
-import akka.http.scaladsl.model.HttpMethods
 import akka.stream._
 import akka.stream.scaladsl._
-import bugapp.BugApp.{akkaConfig, bugzillaUrl}
 import bugapp.bugzilla._
-import bugapp.repository._
 import bugapp.Implicits._
-import bugapp.http.HttpClient
 import de.knutwalker.akka.stream.support.CirceStreamSupport
 import org.scalatest.FunSuite
 
 /**
   *
   */
-class AkkaStreamTests extends FunSuite with AkkaConfig {
+class AkkaStreamTests extends FunSuite with AkkaConfig with CirceStreamSupport {
 
   test("Simple Stream") {
     implicit val system = ActorSystem()
@@ -78,18 +74,27 @@ class AkkaStreamTests extends FunSuite with AkkaConfig {
     implicit val ec = system.dispatcher
     implicit val materializer = ActorMaterializer()
 
+    val limit = 2200
+
     // A GraphStage is a proper Graph, just like what GraphDSL.create would return
-    val sourceGraph: Graph[SourceShape[String], NotUsed] = new BugzillaSource(10)
+    val sourceGraph: Graph[SourceShape[ByteString], NotUsed] = new BugzillaSource(Some(OffsetDateTime.now.minusYears(2)), limit)
 
     // Create a Source from the Graph to access the DSL
-    val source: Source[String, NotUsed] = Source.fromGraph(sourceGraph)
+    val source: Source[ByteString, NotUsed] = Source.fromGraph(sourceGraph)
 
-    val result1: Future[String] = source.take(10).runFold("")(_ + _ + "\n")
-    println(Await.result(result1, 20.seconds))
+    val future1: Future[String] =
+      source.via(decode[BugzillaResponse[BugzillaResult]]).
+        map(response => response.result.get.bugs).
+        takeWhile(bugs => bugs.nonEmpty).
+        mapConcat(identity).
+        filter(bug =>
+          bug.product != "CRF Hot Deploy - Prod DB" &&
+          bug.product != "Ecomm Deploy - Prod DB"
+        ).
+        runFold("")(_ + _ + "\n")
 
-    val result2: Future[String] = source.take(10).runFold("q")(_ + _ + "\n")
-    println(Await.result(result2, 20.seconds))
-
+    val result1 = Await.result(future1, 80.seconds)
+    println(result1)
   }
 
 /*
