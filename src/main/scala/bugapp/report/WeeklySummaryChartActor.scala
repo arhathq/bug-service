@@ -42,15 +42,33 @@ class WeeklySummaryChartActor(owner: ActorRef) extends Actor with ActorLogging {
   }
 
   private def weekSummaryChart(startDate: OffsetDateTime, endDate: OffsetDateTime, bugs: Seq[Bug]): ReportField = {
-    val lastResolvedAndOpenedBugs = bugs.filter { bug =>
-      (bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate)) ||
-        (bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate))
+    val lastOpenedBugs = bugs.filter { bug =>
+      bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)
     }
+    lastOpenedBugs.groupBy(bug => bug.opened.toLocalDate).foreach {tuple =>
+      val date = tuple._1
+      val bugs = tuple._2
+      log.debug(s"$date")
+      bugs.foreach(bug => log.debug(s"[${bug.id}]: ${bug.opened}  (${bug.stats.status})"))
+    }
+
+    val lastResolvedBugs = bugs.filter { bug =>
+      bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate)
+    }
+    lastResolvedBugs.groupBy(bug => bug.changed.toLocalDate).foreach {tuple =>
+      val date = tuple._1
+      val bugs = tuple._2
+      log.debug(s"$date")
+      bugs.foreach(bug => log.debug(s"[${bug.id}]: ${bug.changed}  (${bug.stats.status})"))
+    }
+
+
     val marks = Metrics.daysRange(startDate, endDate)
 
+
     val dataSet = new DefaultCategoryDataset()
-    weekSummaryChartData(Metrics.OpenStatus, marks, lastResolvedAndOpenedBugs, (b: Bug) => b.opened.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
-    weekSummaryChartData(Metrics.FixedStatus, marks, lastResolvedAndOpenedBugs, (b: Bug) => b.changed.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
+    weekSummaryChartData(Metrics.OpenStatus, marks, lastOpenedBugs, (b: Bug) => b.opened.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
+    weekSummaryChartData(Metrics.FixedStatus, marks, lastResolvedBugs, (b: Bug) => b.changed.toLocalDate).foreach(data => dataSet.addValue(data._1, data._2, data._3))
 
     ReportField("image",
       MapValue(

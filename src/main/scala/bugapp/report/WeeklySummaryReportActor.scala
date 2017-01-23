@@ -23,15 +23,20 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
       val weeks = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
 
       val bugsForCurrentWeek = bugs.filter(bug => bug.opened.isAfter(startDate))
-      val bugsForLastWeek = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(2)) && bug.opened.isBefore(endDate.minusWeeks(1)))
+      val bugsForLastWeek = bugs.filter { bug =>
+        (bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)) ||
+          (bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
+      }
       val bugsForLast15Week = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(15)))
+
+      val currentWeek = Metrics.marks(endDate, 1).head
 
       val data =
         ReportData("week-summary-report",
           MapValue(
             productionQueueData(bugs, startDate, endDate),
             weeklyStatisticsData(bugs, startDate, endDate),
-            bugCountData(bugsForCurrentWeek, bugsForLast15Week, weeks)
+            bugCountData(bugsForCurrentWeek, bugsForLast15Week, weeks, currentWeek)
           )
         )
 
@@ -48,7 +53,7 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     )
   }
 
-  private def bugCountData(bugs: Seq[Bug], totalBugs: Seq[Bug], weeks: Int): ReportField = {
+  private def bugCountData(bugs: Seq[Bug], totalBugs: Seq[Bug], weeks: Int, currentWeek: String): ReportField = {
 
     val bugsGrouped = bugs.groupBy(bug => bug.stats.status)
     val openedBugNumber = bugsGrouped.getOrElse(Metrics.OpenStatus, Seq()).size
@@ -60,13 +65,15 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     val totalClosedBugNumber = totalBugsGrouped.getOrElse(Metrics.FixedStatus, Seq()).size
     val totalInvalidBugNumber = totalBugsGrouped.getOrElse(Metrics.InvalidStatus, Seq()).size
 
-    val averageOpenedBugNumber = average(totalOpenedBugNumber, openedBugNumber)
-    val averageClosedBugNumber = average(totalClosedBugNumber, closedBugNumber)
-    val averageInvalidBugNumber = average(totalInvalidBugNumber, invalidBugNumber)
+    val averageOpenedBugNumber = average(totalOpenedBugNumber, weeks)
+    val averageClosedBugNumber = average(totalClosedBugNumber, weeks)
+    val averageInvalidBugNumber = average(totalInvalidBugNumber, weeks)
 
     val totalBugNumber = closedBugNumber + openedBugNumber + invalidBugNumber
     val totalOfTotalBugNumber = totalClosedBugNumber + totalOpenedBugNumber + totalInvalidBugNumber
-    val totalAverageBugNumber = average(totalOfTotalBugNumber, totalBugNumber)
+    val totalAverageBugNumber = average(totalOfTotalBugNumber, weeks)
+
+
 
     ReportField("bugs-count",
       MapValue(
@@ -74,7 +81,7 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
         ReportField("table",
           ReportField("row",
             ListValue(
-              tableRowData("Mark", closedBugNumber, openedBugNumber, invalidBugNumber, totalBugNumber),
+              tableRowData(currentWeek, closedBugNumber, openedBugNumber, invalidBugNumber, totalBugNumber),
               tableRowData("Average", averageClosedBugNumber, averageOpenedBugNumber, averageInvalidBugNumber, totalAverageBugNumber),
               tableRowData("Total", totalClosedBugNumber, totalOpenedBugNumber, totalInvalidBugNumber, totalOfTotalBugNumber)
             )

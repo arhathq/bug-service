@@ -83,13 +83,13 @@
             <fo:block text-align="justify" font-weight="bold">0-2 Days</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
-            <fo:block text-align="justify" font-weight="bold">2-7 Days</fo:block>
+            <fo:block text-align="justify" font-weight="bold">3-6 Days</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
             <fo:block text-align="justify" font-weight="bold">7-30 Days</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
-            <fo:block text-align="justify" font-weight="bold">30-90 Days</fo:block>
+            <fo:block text-align="justify" font-weight="bold">31-90 Days</fo:block>
           </fo:table-cell>
           <fo:table-cell border="solid .5px black" padding="1em" width="2cm">
             <fo:block text-align="justify" font-weight="bold">91-365 Days</fo:block>
@@ -582,7 +582,7 @@
       <fo:list-item space-before="1.5em">
         <fo:list-item-label end-indent="label-end()"><fo:block>&#x2022;</fo:block></fo:list-item-label>
         <fo:list-item-body start-indent="body-start()">
-          <fo:block>Production Queue size <xsl:value-of select="production-queue/state"/> from <xsl:value-of select="production-queue/from"/> to <fo:inline color="red"><xsl:value-of select="production-queue/to"/></fo:inline> bugs; P1/P2 queue is <xsl:value-of select="production-queue/high-priotity-bugs"/> bugs</fo:block>
+          <fo:block>Production Queue size is <fo:inline color="red"><xsl:value-of select="production-queue/to"/></fo:inline> bugs; P1/P2 queue is <xsl:value-of select="production-queue/high-priotity-bugs"/> bugs</fo:block>
           <xsl:if test="production-queue/blocked-bugs!=''">
             <fo:block margin-left="1.5em">- <xsl:value-of select="production-queue/blocked-bugs"/> bugs are BLOCKED</fo:block>
           </xsl:if>
