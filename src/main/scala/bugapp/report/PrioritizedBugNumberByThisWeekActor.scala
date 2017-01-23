@@ -6,9 +6,9 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model.{MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 
-import scala.xml.Elem
 
 /**
   * @author Alexander Kuleshov
@@ -24,27 +24,31 @@ class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends Actor with Ac
       val weeklyBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
       val bugsByPriority = weeklyBugs.groupBy(bug => bug.priority)
 
-      val data =
-        <priority-bugs-by-this-week>
-          {bugsByPriority.toSeq.sortWith(_._1 < _._1).map {case (priority, prioritizedBugs) => priorityBugsNumElem(priority, prioritizedBugs)}}
-          {priorityBugsNumElem("Grand Total", weeklyBugs)}
-        </priority-bugs-by-this-week>
+      val priorityBugsNumValue =
+        bugsByPriority.toSeq.sortWith(_._1 < _._1).
+          map {case (priority, prioritizedBugs) => priorityBugsNumData(priority, prioritizedBugs)} :+
+          priorityBugsNumData("Grand Total", weeklyBugs)
+
+      val data = model.ReportData("priority-bugs-by-this-week", MapValue(priorityBugsNumValue: _*))
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def priorityBugsNumElem(priority: String, bugs: Seq[Bug]): Elem = {
+  def priorityBugsNumData(priority: String, bugs: Seq[Bug]): ReportField = {
     val closed = bugs.count(bug => bug.stats.status == Metrics.FixedStatus)
     val invalid = bugs.count(bug => bug.stats.status == Metrics.InvalidStatus)
     val opened = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
 
-    <priority-bugs>
-      <priority>{priority}</priority>
-      <closed>{formatNumber(closed)}</closed>
-      <invalid>{formatNumber(invalid)}</invalid>
-      <opened>{formatNumber(opened)}</opened>
-      <total>{formatNumber(closed + invalid + opened)}</total>
-    </priority-bugs>
+    ReportField("priority-bugs",
+      MapValue(
+        ReportField("priority", StringValue(priority)),
+        ReportField("closed", StringValue(formatNumber(closed))),
+        ReportField("invalid", StringValue(formatNumber(invalid))),
+        ReportField("opened", StringValue(formatNumber(opened))),
+        ReportField("total", StringValue(formatNumber(closed + invalid + opened)))
+
+      )
+    )
   }
 }
 

@@ -3,8 +3,8 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model.{IntValue, MapValue, ReportField, StringValue}
 
-import scala.xml.Elem
 
 /**
   * @author Alexander Kuleshov
@@ -19,18 +19,22 @@ class TopAssigneesActor(owner: ActorRef) extends Actor with ActorLogging {
       val topBugAssignees = bugsByAssignee.map(tuple => (tuple._1, tuple._2.length)).toSeq.sortWith(_._2 > _._2).take(15)
 
       val data =
-        <top-asignees>
-          {topBugAssignees.map(topBugsAssigneeElem)}
-        </top-asignees>
+        model.ReportData("top-asignees",
+          MapValue(
+            topBugAssignees.map(topBugsAssigneeData): _*
+          )
+        )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def topBugsAssigneeElem(assignee: (String, Int)): Elem = {
-      <asignee>
-        <name>{assignee._1}</name>
-        <count>{assignee._2}</count>
-      </asignee>
+  def topBugsAssigneeData(assignee: (String, Int)): ReportField = {
+    ReportField("asignee",
+      MapValue(
+        ReportField("name", StringValue(assignee._1)),
+        ReportField("count", IntValue(assignee._2))
+      )
+    )
   }
 }
 

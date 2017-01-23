@@ -3,10 +3,11 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
 import bugapp.report.ReportActor.ReportData
+import bugapp.report.converter.XmlReportDataConverter
+import bugapp.report.model.{MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 
 import scala.collection.mutable
-import scala.xml.Elem
 
 /**
   * Created by arhathq on 04.08.2016.
@@ -16,7 +17,7 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
   private val requests = mutable.Map.empty[String, Map[String, Any]]
-  private val data = mutable.Map.empty[String, List[Elem]]
+  private val data = mutable.Map.empty[String, List[model.ReportData]]
 
   private val reportWorkers = new ReportWorkers(context)
 
@@ -29,7 +30,7 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
       log.info(s"Job [$reportId], Workers $jobs")
       workers.foreach(_ ! ReportDataRequest(reportId, reportParams, bugs))
 
-    case ReportDataResponse(reportId, result) =>
+    case ReportDataResponse(reportId, result: model.ReportData) =>
       data.get(reportId) match {
         case Some(reportDataList) => data += reportId -> (result :: reportDataList)
         case None => data += reportId -> (result :: Nil)
@@ -55,22 +56,30 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
 
     data.get(reportId) match {
       case Some(dataList) =>
-        val reportData = new xml.NodeBuffer()
-        dataList.foreach(reportData.append)
+        val reportData = dataList.map(data => ReportField(data.name, data.fields))
         data -= reportId
 
         val result =
-          <bug-reports>
-            <report-header>
-              <date>{BugApp.toDate}</date>
-            </report-header>
-            {reportData}
-            <report-footer>
-              <note>{createNote(excludedComponents)}</note>
-            </report-footer>
-          </bug-reports>
+          model.ReportData("bug-reports",
+            MapValue(
+              Seq(
+                ReportField("report-header",
+                  MapValue(
+                    ReportField("date", StringValue(BugApp.toDate.toString))
+                  )
+                ),
+                ReportField("report-footer",
+                  MapValue(
+                    ReportField("note", StringValue(createNote(excludedComponents)))
+                  )
+                )
+              ) ++ reportData: _*
+            )
+          )
 
-        ReportData(reportId, reportType, result)
+        val reportDataConverter = new XmlReportDataConverter()
+
+        ReportData(reportId, reportType, reportDataConverter.convert(result))
     }
   }
 
@@ -86,7 +95,7 @@ object ReportDataBuilder {
   case class GetReportData(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
 
   case class ReportDataRequest(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
-  case class ReportDataResponse(reportId: String, result: Elem)
+  case class ReportDataResponse[T](reportId: String, result: T)
 
   def props(reportActor: ActorRef) = Props(classOf[ReportDataBuilder], reportActor)
 }

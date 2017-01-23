@@ -162,7 +162,7 @@
     </fo:table-row>
   </xsl:template>
 
-  <xsl:template match="/all-open-bugs-chart">
+  <xsl:template match="all-open-bugs-chart">
     <fo:block text-align="center" margin-top="1cm">
       <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
     </fo:block>

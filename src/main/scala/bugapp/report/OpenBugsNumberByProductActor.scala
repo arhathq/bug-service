@@ -4,8 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-
-import scala.xml.Elem
+import bugapp.report.model.{MapValue, ReportField, StringValue}
 
 /**
   * @author Alexander Kuleshov
@@ -14,7 +13,7 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogg
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {
-    case ReportDataRequest(reportId, reportParams, bugs) =>
+    case ReportDataRequest(reportId, _, bugs) =>
       val bugsByProduct = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.product)
 
       val bugCountByProductAndPriority = bugsByProduct.map {tuple =>
@@ -26,29 +25,33 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogg
         bugCountByProductAndPriority.values.
           foldLeft(Map[String, Int]())((acc, el) => acc ++ el.map { case (k, v) => k -> (v + acc.getOrElse(k, 0)) })
 
-      val data =
-        <open-bugs-by-product>
-          {bugCountByProductAndPriority.map(tuple => productBugsElem(tuple._1, tuple._2))}
-          {productBugsElem("Grand Total", totalBugCountByPriority)}
-        </open-bugs-by-product>
+      val productBugsValue =
+        bugCountByProductAndPriority.toSeq.
+          sortWith((tuple1, tuple2) => tuple1._2.values.sum > tuple2._2.values.sum).
+          map(tuple => productBugsData(tuple._1, tuple._2)) :+
+          productBugsData("Grand Total", totalBugCountByPriority)
+
+      val data = model.ReportData("open-bugs-by-product", MapValue(productBugsValue: _*))
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def productBugsElem(product: String, data: Map[String, Int]): Elem = {
+  def productBugsData(product: String, data: Map[String, Int]): ReportField = {
     val p1Count = data.getOrElse(Metrics.P1Priority, 0)
     val p2Count = data.getOrElse(Metrics.P2Priority, 0)
     val p3Count = data.getOrElse(Metrics.P3Priority, 0)
     val npCount = data.getOrElse(Metrics.NPPriority, 0)
 
-    <product-bugs>
-      <product>{product}</product>
-      <np>{formatNumber(npCount)}</np>
-      <p1>{formatNumber(p1Count)}</p1>
-      <p2>{formatNumber(p2Count)}</p2>
-      <p3>{formatNumber(p3Count)}</p3>
-      <total>{formatNumber(p1Count + p2Count + p3Count + npCount)}</total>
-    </product-bugs>
+    ReportField("product-bugs",
+      MapValue(
+        ReportField("product", StringValue(product)),
+        ReportField("np", StringValue(formatNumber(npCount))),
+        ReportField("p1", StringValue(formatNumber(p1Count))),
+        ReportField("p2", StringValue(formatNumber(p2Count))),
+        ReportField("p3", StringValue(formatNumber(p3Count))),
+        ReportField("total", StringValue(formatNumber(p1Count + p2Count + p3Count + npCount)))
+      )
+    )
   }
 
 }

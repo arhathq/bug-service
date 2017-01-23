@@ -3,9 +3,10 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model._
+import bugapp.report.ReportActor.formatNumber
 import bugapp.repository.Bug
 
-import scala.xml._
 
 /**
   * @author Alexander Kuleshov
@@ -27,30 +28,31 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
       val p4OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P4Priority, Seq())
       val npOpenBugs = prioritizedOpenBugs.getOrElse(Metrics.NPPriority, Seq())
 
-      val data =
-          <all-open-bugs>
-            { prioritizedBugsElem(Metrics.P1Priority, p1OpenBugs) }
-            { prioritizedBugsElem(Metrics.P2Priority, p2OpenBugs) }
-            { prioritizedBugsElem(Metrics.P3Priority, p3OpenBugs) }
-            { prioritizedBugsElem(Metrics.P4Priority, p4OpenBugs) }
-            { prioritizedBugsElem(Metrics.NPPriority, npOpenBugs) }
-            {prioritizedBugsElem("Grand Total", openBugs)}
-            <excludedComponents>{excludedComponents.mkString("\'", "\', \'", "\'")}</excludedComponents>
-          </all-open-bugs>
+      val allOpenBugsData = Seq(
+        prioritizedBugsData(Metrics.NPPriority, npOpenBugs),
+        prioritizedBugsData(Metrics.P1Priority, p1OpenBugs),
+        prioritizedBugsData(Metrics.P2Priority, p2OpenBugs),
+        prioritizedBugsData(Metrics.P3Priority, p3OpenBugs),
+        prioritizedBugsData(Metrics.P4Priority, p4OpenBugs),
+        prioritizedBugsData("Grand Total", openBugs),
+        ReportField("excludedComponents", StringValue(excludedComponents.mkString("\'", "\', \'", "\'")))
+      )
 
-       owner ! ReportDataResponse(reportId, data)
+      val data = ReportData("all-open-bugs", MapValue(allOpenBugsData: _*))
+
+      owner ! ReportDataResponse(reportId, data)
   }
 
-  def prioritizedBugsElem(priority: String, bugs: Seq[Bug]): Elem = {
+  def prioritizedBugsData(priority: String, bugs: Seq[Bug]): ReportField = {
     val data = splitBugsByOpenPeriod(bugs).map(tuple => tuple._1 -> tuple._2.length)
 
-    <prioritized-bugs>
-      <priority>{priority}</priority>
-      {data.map(tuple => Elem.apply(null, s"${tuple._1}", Null, TopScope, true, Text(tuple._2.toString)))}
-      <total>{val total = data.map(_._2).sum; if(total > 0) total}</total>
-    </prioritized-bugs>
-  }
+    val prioritizedBugsValue =
+      ReportField("priority", StringValue(priority)) +:
+        data.map(tuple => ReportField(s"${tuple._1}", StringValue(tuple._2.toString))) :+
+        ReportField("total", StringValue(formatNumber(data.map(_._2).sum)))
 
+    ReportField("prioritized-bugs", MapValue(prioritizedBugsValue: _*))
+  }
 
 }
 

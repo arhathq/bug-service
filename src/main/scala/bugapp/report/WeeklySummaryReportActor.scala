@@ -1,14 +1,12 @@
 package bugapp.report
 
-import java.time.{DayOfWeek, OffsetDateTime}
+import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportActor._
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model._
 import bugapp.repository.{Bug, BugHistory}
-
-import scala.xml.{Elem, Group, Text}
 
 /**
   * @author Alexander Kuleshov
@@ -29,29 +27,28 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
       val bugsForLast15Week = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(15)))
 
       val data =
-        <week-summary-report>
-          {productionQueueElem(bugs, startDate, endDate)}
-          {weeklyStatisticsElem(bugs, startDate, endDate)}
-          <bugs-count>
-            <period>{weeks}</period>
-            {tableElem(bugsForCurrentWeek, bugsForLast15Week)}
-          </bugs-count>
-        </week-summary-report>
+        ReportData("week-summary-report",
+          MapValue(
+            productionQueueData(bugs, startDate, endDate),
+            weeklyStatisticsData(bugs, startDate, endDate),
+            bugCountData(bugsForCurrentWeek, bugsForLast15Week, weeks)
+          )
+        )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def tableRowElem(line: String, closed: Double, open: Double, invalid: Double, total: Double) = {
-    <row>
-      <line>{line}</line>
-      <invalid>{invalid}</invalid>
-      <closed>{closed}</closed>
-      <open>{open}</open>
-      <total>{total}</total>
-    </row>
+  private def tableRowData(line: String, closed: Double, open: Double, invalid: Double, total: Double): MapValue = {
+    MapValue(
+      ReportField("line", StringValue(line)),
+      ReportField("invalid", BigDecimalValue(invalid)),
+      ReportField("closed", BigDecimalValue(closed)),
+      ReportField("open", BigDecimalValue(open)),
+      ReportField("total", BigDecimalValue(total))
+    )
   }
 
-  private def tableElem(bugs: Seq[Bug], totalBugs: Seq[Bug]): Elem = {
+  private def bugCountData(bugs: Seq[Bug], totalBugs: Seq[Bug], weeks: Int): ReportField = {
 
     val bugsGrouped = bugs.groupBy(bug => bug.stats.status)
     val openedBugNumber = bugsGrouped.getOrElse(Metrics.OpenStatus, Seq()).size
@@ -71,29 +68,41 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     val totalOfTotalBugNumber = totalClosedBugNumber + totalOpenedBugNumber + totalInvalidBugNumber
     val totalAverageBugNumber = average(totalOfTotalBugNumber, totalBugNumber)
 
-    <table>
-      {tableRowElem("Mark", closedBugNumber, openedBugNumber, invalidBugNumber, totalBugNumber)}
-      {tableRowElem("Average", averageClosedBugNumber, averageOpenedBugNumber, averageInvalidBugNumber, totalAverageBugNumber)}
-      {tableRowElem("Total", totalClosedBugNumber, totalOpenedBugNumber, totalInvalidBugNumber, totalOfTotalBugNumber)}
-    </table>
+    ReportField("bugs-count",
+      MapValue(
+        ReportField("period", IntValue(weeks)),
+        ReportField("table",
+          ReportField("row",
+            ListValue(
+              tableRowData("Mark", closedBugNumber, openedBugNumber, invalidBugNumber, totalBugNumber),
+              tableRowData("Average", averageClosedBugNumber, averageOpenedBugNumber, averageInvalidBugNumber, totalAverageBugNumber),
+              tableRowData("Total", totalClosedBugNumber, totalOpenedBugNumber, totalInvalidBugNumber, totalOfTotalBugNumber)
+            )
+          )
+        )
+      )
+    )
   }
 
-  private def productionQueueElem(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): Elem = {
-  val queueBugsCount = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
-  val highPriorityBugsCount = bugs.count { bug =>
-    bug.stats.status == Metrics.OpenStatus && (bug.priority == Metrics.P1Priority || bug.priority == Metrics.P2Priority)
-  }
-  val blockedBugsCount = bugs.count(bug => bug.status == "BLOCKED" && bug.stats.status == Metrics.OpenStatus)
-    <production-queue>
-      <state>changed</state>
-      <from>0</from>
-      <to>{queueBugsCount}</to>
-      <high-priotity-bugs>{highPriorityBugsCount}</high-priotity-bugs>
-      <blocked-bugs>{blockedBugsCount}</blocked-bugs>
-    </production-queue>
+  private def productionQueueData(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): ReportField = {
+    val queueBugsCount = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
+    val highPriorityBugsCount = bugs.count { bug =>
+      bug.stats.status == Metrics.OpenStatus && (bug.priority == Metrics.P1Priority || bug.priority == Metrics.P2Priority)
+    }
+    val blockedBugsCount = bugs.count(bug => bug.status == "BLOCKED" && bug.stats.status == Metrics.OpenStatus)
+
+    ReportField("production-queue",
+      MapValue(
+        ReportField("state", StringValue("changed")),
+        ReportField("from", IntValue(0)),
+        ReportField("to", IntValue(queueBugsCount)),
+        ReportField("high-priotity-bugs", IntValue(highPriorityBugsCount)),
+        ReportField("blocked-bugs", IntValue(blockedBugsCount))
+      )
+    )
   }
 
-  private def weeklyStatisticsElem(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): Elem = {
+  private def weeklyStatisticsData(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): ReportField = {
     val newBugsCount = bugs.count(bug => bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate))
     val reopenedBugsCount = bugs.count(bug => bug.status == "REOPENED" && bug.changed.isAfter(startDate))
     val movedBugsCount = bugs.count(bug => bug.priority != "NP" && bug.changed.isAfter(startDate))
@@ -102,14 +111,17 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
     val totalBugCommentsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
       acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.count(item => item.when.isAfter(startDate))
     )
-    <statistics>
-      <new>{newBugsCount}</new>
-      <reopened>{reopenedBugsCount}</reopened>
-      <moved>{movedBugsCount}</moved>
-      <resolved>{resolvedBugsCount}</resolved>
-      <bugs-updated>{updatedBugsCount}</bugs-updated>
-      <total-comments>{totalBugCommentsCount}</total-comments>
-    </statistics>
+
+    ReportField("statistics",
+      MapValue(
+        ReportField("new", IntValue(newBugsCount)),
+        ReportField("reopened", IntValue(reopenedBugsCount)),
+        ReportField("moved", IntValue(movedBugsCount)),
+        ReportField("resolved", IntValue(resolvedBugsCount)),
+        ReportField("bugs-updated", IntValue(updatedBugsCount)),
+        ReportField("total-comments", IntValue(totalBugCommentsCount))
+      )
+    )
   }
 
 }

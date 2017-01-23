@@ -4,13 +4,11 @@ import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportActor.createXmlElement
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model.{ListValue, MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
-
-import scala.xml._
 
 /**
   * @author Alexander Kuleshov
@@ -42,37 +40,69 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
         (closedBugsNumber, invalidBugsNumber, openedBugsNumber)
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
 
-      val data = createXmlElement(s"bugs-by-weeks-$weeks",
-        weeklyBugsElem(weeklyBugs),
-        chartElem(weeklyBugs)
-      )
+      val data =
+        model.ReportData(s"bugs-by-weeks-$weeks",
+          MapValue(
+            weeklyBugsData(weeklyBugs),
+            chartData(weeklyBugs)
+          )
+        )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def weeklyBugsElem(bugs: Map[String, Map[String, Seq[Bug]]]): Elem = {
+  private def weeklyBugsData(bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
     val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
-    val marksElem = createXmlElement("header", Group(marks.map(week => createXmlElement(s"w$week", Text(week)))))
+    val marksData = ReportField("header",
+      MapValue(
+        marks.map(week => ReportField(s"w$week", StringValue(week))): _*
+      )
+    )
 
     val fixed = weeklyBugsData(Metrics.FixedStatus, marks, bugs)
-    val fixedElem = createXmlElement("row",
-      createXmlElement("name", Text("Closed")),
-      Group(fixed.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    val fixedData = ReportField("row",
+      MapValue(
+        ReportField("name", StringValue("Closed")),
+        ReportField("value",
+          ListValue(
+            fixed.map(tuple => StringValue(formatNumber(tuple._2))): _*
+          )
+        )
+      )
     )
 
     val open = weeklyBugsData(Metrics.OpenStatus, marks, bugs)
-    val openElem = createXmlElement("row",
-      createXmlElement("name", Text("Open")),
-      Group(open.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    val openData = ReportField("row",
+      MapValue(
+        ReportField("name", StringValue("Open")),
+        ReportField("value",
+          ListValue(
+            open.map(tuple => StringValue(formatNumber(tuple._2))): _*
+          )
+        )
+      )
     )
 
     val invalid = weeklyBugsData(Metrics.InvalidStatus, marks, bugs)
-    val invalidElem = createXmlElement("row",
-      createXmlElement("name", Text("Invalid")),
-      Group(invalid.map(tuple => createXmlElement("value", Text(formatNumber(tuple._2)))))
+    val invalidData = ReportField("row",
+      MapValue(
+        ReportField("name", StringValue("Invalid")),
+        ReportField("value",
+          ListValue(
+            invalid.map(tuple => StringValue(formatNumber(tuple._2))): _*
+          )
+        )
+      )
     )
 
-    createXmlElement("weekly-bugs", marksElem, fixedElem, openElem, invalidElem)
+    ReportField("weekly-bugs",
+      MapValue(
+        marksData,
+        fixedData,
+        openData,
+        invalidData
+      )
+    )
   }
 
   private def weeklyBugsData(priority: String, marks: Seq[String], bugs: Map[String, Map[String, Seq[Bug]]]): Seq[(String, Int)] = {
@@ -83,7 +113,7 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     }
   }
 
-  private def chartElem(bugs: Map[String, Map[String, Seq[Bug]]]): Elem = {
+  private def chartData(bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
     val dataSet = new DefaultCategoryDataset()
 
     val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
@@ -93,10 +123,13 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
       dataSet.addValue(bugsByStatus.getOrElse(Metrics.OpenStatus, Seq()).length, "Open", mark)
       dataSet.addValue(bugsByStatus.getOrElse(Metrics.InvalidStatus, Seq()).length, "Invalid", mark)
     }
-    <image>
-      <content-type>image/jpeg</content-type>
-      <content-value>{ChartGenerator.generateBase64BugsFromLast15Weeks(dataSet)}</content-value>
-    </image>
+
+    ReportField("image",
+      MapValue(
+        ReportField("content-type", StringValue("image/jpeg")),
+        ReportField("content-value", StringValue(ChartGenerator.generateBase64BugsFromLast15Weeks(dataSet)))
+      )
+    )
   }
 }
 

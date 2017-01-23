@@ -4,9 +4,9 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.ReportActor.dateTimeFormat
+import bugapp.report.model.{IntValue, MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 
-import scala.xml.Elem
 
 /**
   * @author Alexander Kuleshov
@@ -16,29 +16,29 @@ class OpenTopBugListActor (owner: ActorRef) extends Actor with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {
-    case ReportDataRequest(reportId, reportParams, bugs) =>
+    case ReportDataRequest(reportId, _, bugs) =>
       val prioritizedOpenBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
 
-      val data =
-        <open-bugs>
-          {p1OpenBugs.map(bugElem)}
-          {p2OpenBugs.map(bugElem)}
-        </open-bugs>
+      val openBugsData = p1OpenBugs.map(bugData) ++ p2OpenBugs.map(bugData)
+
+      val data = model.ReportData("open-bugs", MapValue(openBugsData: _*))
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def bugElem(bug: Bug): Elem = {
-    <bug>
-      <id>{bug.id}</id>
-      <priority>{bug.priority}</priority>
-      <opened>{dateTimeFormat.format(bug.opened)}</opened>
-      <summary>{bug.summary}</summary>
-      <client>{bug.hardware}</client>
-      <product>{bug.product}</product>
-    </bug>
+  def bugData(bug: Bug): ReportField = {
+    ReportField("bug",
+      MapValue(
+        ReportField("id", IntValue(bug.id)),
+        ReportField("priority", StringValue(bug.priority)),
+        ReportField("opened", StringValue(dateTimeFormat.format(bug.opened))),
+        ReportField("summary", StringValue(bug.summary)),
+        ReportField("client", StringValue(bug.hardware)),
+        ReportField("product", StringValue(bug.product))
+      )
+    )
   }
 
 }
