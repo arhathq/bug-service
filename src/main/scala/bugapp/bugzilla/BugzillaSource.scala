@@ -3,6 +3,7 @@ package bugapp.bugzilla
 import java.time.OffsetDateTime
 
 import akka.actor.ActorSystem
+import akka.event.{Logging, LoggingAdapter}
 import akka.http.scaladsl.{ConnectionContext, Http}
 import akka.http.scaladsl.model._
 import akka.stream._
@@ -28,7 +29,7 @@ class BugzillaSource(val startDate: Option[OffsetDateTime] = None, val limit: In
       private var futureHttpResponseCallback: AsyncCallback[Try[HttpResponse]] = _
       private var futureResponoseCallback: AsyncCallback[Try[ByteString]] = _
 
-      private val logger = s.log
+      private val logger: LoggingAdapter = Logging(s, getClass)
 
       private val dummyCtx = ConnectionContext.https(new DummySSLFactory().getSSLContext)
 

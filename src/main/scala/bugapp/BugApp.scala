@@ -50,6 +50,6 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
   def toDate: OffsetDateTime = OffsetDateTime.now
 
   def fromDate(toDate: OffsetDateTime, weeksPeriod: Int): OffsetDateTime = {
-    toDate.minusWeeks(weeksPeriod - 1).`with`(WeekFields.ISO.getFirstDayOfWeek).truncatedTo(ChronoUnit.DAYS)
+    toDate.minusWeeks(weeksPeriod).`with`(WeekFields.ISO.getFirstDayOfWeek).truncatedTo(ChronoUnit.DAYS)
   }
 }
