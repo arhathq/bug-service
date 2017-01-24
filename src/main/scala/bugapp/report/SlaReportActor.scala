@@ -1,15 +1,15 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
-import java.time.format.DateTimeFormatter
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.model.{ReportField, _}
 import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
-import scala.xml._
 
 /**
   *
@@ -19,9 +19,9 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
-      val startDate = reportParams(ReportParams.StartDate).asInstanceOf[OffsetDateTime]
-      val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
       val weekPeriod = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
+      val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
+      val startDate = endDate.minusWeeks(weekPeriod - 1).truncatedTo(ChronoUnit.DAYS)
       val bugtrackerUri = reportParams(ReportParams.BugtrackerUri).asInstanceOf[String]
       val reportType = reportParams(ReportParams.ReportType).asInstanceOf[String]
 
@@ -32,20 +32,25 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
       val p2OutSla = outSlaBugs.getOrElse(Metrics.P2Priority, Seq())
 
       val data =
-        <sla>
-          <p1-sla>
-            {sla(Metrics.P1Priority, marks, p1OutSla, actualBugs.filter(_.priority == Metrics.P1Priority))}
-          </p1-sla>
-          <p2-sla>
-            {sla(Metrics.P2Priority, marks, p2OutSla, actualBugs.filter(_.priority == Metrics.P2Priority))}
-          </p2-sla>
-          <sla-chart>
-            <image>
-              <content-type>image/jpeg</content-type>
-              <content-value>{slaAchievementTrendChart(marks, actualBugs)}</content-value>
-            </image>
-          </sla-chart>
-        </sla>
+        model.ReportData("sla",
+          MapValue(
+            ReportField("p1-sla",
+              MapValue(
+                sla(Metrics.P1Priority, marks, p1OutSla, actualBugs.filter(_.priority == Metrics.P1Priority))
+              )
+            ),
+            ReportField("p2-sla",
+              MapValue(
+                sla(Metrics.P2Priority, marks, p2OutSla, actualBugs.filter(_.priority == Metrics.P2Priority))
+              )
+            ),
+            ReportField("sla-chart",
+              MapValue(
+                slaAchievementTrendChart(marks, actualBugs)
+              )
+            )
+          )
+        )
 
       owner ! ReportDataResponse(reportId, data)
   }
@@ -60,14 +65,20 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
     }
   }
 
-  def slaAchievementTrendChart(marks:Seq[String], bugs: Seq[Bug]): String = {
+  def slaAchievementTrendChart(marks:Seq[String], bugs: Seq[Bug]): ReportField = {
     val dataSet = new DefaultCategoryDataset()
     slaAchievementTrendChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)).foreach {v => dataSet.addValue(v._1, v._2, v._3)}
     slaAchievementTrendChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)).foreach {v => dataSet.addValue(v._1, v._2, v._3)}
-    ChartGenerator.generateBase64SlaAchievementTrend(dataSet)
+
+    ReportField("image",
+      MapValue(
+        ReportField("content-type", StringValue("image/jpeg")),
+        ReportField("content-value", StringValue(ChartGenerator.generateBase64SlaAchievementTrend(dataSet)))
+      )
+    )
   }
 
-  def sla(priority: String, marks:Seq[String], bugsOutSla: Seq[Bug], allBugs: Seq[Bug]): Elem = {
+  def sla(priority: String, marks:Seq[String], bugsOutSla: Seq[Bug], allBugs: Seq[Bug]): ReportField = {
     val outSlaGrouped = bugsOutSla.groupBy(bug => bug.stats.openMonth)
     val allGrouped = allBugs.groupBy(bug => bug.stats.openMonth)
     val res = marks.map(mark => outSlaGrouped.get(mark) match {
@@ -79,7 +90,12 @@ class SlaReportActor(owner: ActorRef) extends Actor with ActorLogging {
     })
     val total =
       weekPeriodElem(priority, "Grand Total", outSlaGrouped.map(v => v._2.length).sum, allBugs.length)
-    Elem.apply(null, s"sla-achievement", Null, TopScope, true, Group(res), total)
+
+    ReportField(s"sla-achievement",
+      MapValue(
+        res :+ total: _*
+      )
+    )
   }
 
 }
@@ -109,14 +125,16 @@ object SlaReportActor {
 
   val slaPercentage: (Int, Int) => Double = (count, totalCount) => if (totalCount < 1) 100.0 else count * 100.0 / totalCount
 
-  val weekPeriodElem: (String, String, Int, Int) => Elem = (priority, mark, outSlaCount, totalCount) => {
-    <week-period>
-      <priority>{priority}</priority>
-      <week>{mark}</week>
-      <slaPercentage>{slaPercentage(totalCount - outSlaCount, totalCount)}</slaPercentage>
-      <slaCount>{totalCount - outSlaCount}</slaCount>
-      <outSlaCount>{outSlaCount}</outSlaCount>
-      <totalCount>{totalCount}</totalCount>
-    </week-period>
+  val weekPeriodElem: (String, String, Int, Int) => ReportField = (priority, mark, outSlaCount, totalCount) => {
+    ReportField("week-period",
+      MapValue(
+        ReportField("priority", StringValue(priority)),
+        ReportField("week", StringValue(mark)),
+        ReportField("slaPercentage", BigDecimalValue(slaPercentage(totalCount - outSlaCount, totalCount))),
+        ReportField("slaCount", IntValue(totalCount - outSlaCount)),
+        ReportField("outSlaCount", IntValue(outSlaCount)),
+        ReportField("totalCount", IntValue(totalCount))
+      )
+    )
   }
 }

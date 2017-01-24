@@ -1,6 +1,7 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
@@ -19,13 +20,12 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
-      val startDate = endDate.minusDays(7)
+      val startDate = endDate.minusDays(7).truncatedTo(ChronoUnit.DAYS)
       val weeks = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
 
-      val bugsForCurrentWeek = bugs.filter(bug => bug.opened.isAfter(startDate))
       val bugsForLastWeek = bugs.filter { bug =>
         (bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)) ||
-          (bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
+          (bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
       }
       val bugsForLast15Week = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(15)))
 
@@ -35,8 +35,8 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
         ReportData("week-summary-report",
           MapValue(
             productionQueueData(bugs, startDate, endDate),
-            weeklyStatisticsData(bugs, startDate, endDate),
-            bugCountData(bugsForCurrentWeek, bugsForLast15Week, weeks, currentWeek)
+            weeklyStatisticsData(bugsForLastWeek, startDate, endDate),
+            bugCountData(bugsForLastWeek, bugsForLast15Week, weeks, currentWeek)
           )
         )
 
@@ -111,9 +111,25 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
 
   private def weeklyStatisticsData(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): ReportField = {
     val newBugsCount = bugs.count(bug => bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate))
-    val reopenedBugsCount = bugs.count(bug => bug.status == "REOPENED" && bug.changed.isAfter(startDate))
-    val movedBugsCount = bugs.count(bug => bug.priority != "NP" && bug.changed.isAfter(startDate))
-    val resolvedBugsCount = bugs.count(bug => bug.stats.status == Metrics.FixedStatus && bug.changed.isAfter(startDate))
+    val reopenedBugsCount = bugs.filter(bug => bug.stats.reopenCount > 0).foldLeft(0)((acc, bug) =>
+      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
+        acc + history.changes.count(change => change.field == "status" && change.added == "REOPENED" && history.when.isAfter(startDate))
+      )
+    )
+    val movedBugsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
+      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
+        acc + history.changes.count(change =>
+          history.when.isAfter(startDate) &&
+            (change.added == "Production" || change.removed == "Dataload Failed"  || change.removed == "New Files Arrived"  || change.removed == "Data Consistency") &&
+            (bug.status != "RESOLVED" && bug.status != "VERIFIED" && bug.status != "CLOSED")
+        )
+      )
+    )
+    val resolvedBugsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
+      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
+        acc + history.changes.count(change => change.field == "status" && change.added == "RESOLVED" && history.when.isAfter(startDate))
+      )
+    )
     val updatedBugsCount = bugs.count(bug => bug.changed.isAfter(startDate))
     val totalBugCommentsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
       acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.count(item => item.when.isAfter(startDate))
