@@ -24,10 +24,12 @@ class WeeklySummaryReportActor(owner: ActorRef) extends Actor with ActorLogging 
       val weeks = reportParams(ReportParams.WeekPeriod).asInstanceOf[Int]
 
       val bugsForLastWeek = bugs.filter { bug =>
-        (bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)) ||
-          (bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
+        bug.actualDate.isAfter(startDate) && bug.actualDate.isBefore(endDate)
       }
-      val bugsForLast15Week = bugs.filter(bug => bug.opened.isAfter(endDate.minusWeeks(15)))
+      val bugsForLast15Week = bugs.filter { bug =>
+        bug.actualDate.isAfter(endDate.minusWeeks(15).truncatedTo(ChronoUnit.DAYS)) && bug.actualDate.isBefore(endDate)
+      }
+      log.debug(s"Bugs for last 15 weeks: ${bugsForLast15Week.size}")
 
       val currentWeek = Metrics.marks(endDate, 1).head
 

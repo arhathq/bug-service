@@ -2,7 +2,7 @@ package bugapp.bugzilla
 
 import java.time.format.{DateTimeFormatterBuilder, SignStyle}
 import java.time.temporal.{ChronoUnit, IsoFields, Temporal}
-import java.time.{DayOfWeek, OffsetDateTime}
+import java.time.{DayOfWeek, Duration, OffsetDateTime}
 
 import bugapp.Implicits._
 
@@ -186,6 +186,13 @@ object Metrics {
   def daysRange(startDate: OffsetDateTime, endDate: OffsetDateTime): Seq[OffsetDateTime] = {
     Iterator.iterate(startDate)(date => date.plus(1, ChronoUnit.DAYS)).
       takeWhile(date => date.isBefore(endDate) || date.toLocalDate.isEqual(endDate.toLocalDate)).toSeq
+  }
+
+  val marksByDates: (OffsetDateTime, OffsetDateTime) => Seq[String] = (startDate, endDate) => {
+    val duration = Duration.between(startDate, endDate).toDays
+    val weeks = ((duration / 7) + Math.round(duration % 7)).toInt
+    val week = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
+    (week to (week - weeks) by -1).map(w => weeksStrFormat.format(endDate.minusWeeks(week - w))).reverse
   }
 
   val marks: (OffsetDateTime, Int) => Seq[String] = (date, weeks) => {

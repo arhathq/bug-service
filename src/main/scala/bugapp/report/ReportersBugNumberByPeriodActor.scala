@@ -1,6 +1,7 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
@@ -20,9 +21,10 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
     case ReportDataRequest(reportId, reportParams, bugs) =>
 
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
-      val startDate = endDate.minusWeeks(weeks)
+      val startDate = endDate.minusWeeks(weeks).truncatedTo(ChronoUnit.DAYS)
 
-      val weeklyBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
+      val weeklyBugs = bugs.filter {bug => bug.actualDate.isAfter(startDate) && bug.actualDate.isBefore(endDate)}
+      log.debug(s"Filtered bugs number: ${weeklyBugs.size}")
 
       val departmentBugs: Map[String, Map[String, Seq[Bug]]] = weeklyBugs.groupBy {bug =>
         repository.getEmployee(bug.reporter).getOrElse(Employee(bug.reporter, "Other")).department

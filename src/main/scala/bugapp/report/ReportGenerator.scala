@@ -7,8 +7,9 @@ import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.UtilsIO
-import bugapp.report.ReportActor.{ReportError, ReportGenerated, Report}
+import bugapp.report.ReportActor.{Report, ReportError, ReportGenerated}
 
+import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, XML}
 
 /**
@@ -21,16 +22,17 @@ class ReportGenerator(fopConf: String, reportActor: ActorRef) extends Actor with
 
   override def receive: Receive = {
     case GenerateReport(reportId, reportTemplate, reportData) =>
-      try {
-        val output = reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate))
+      val tryOutput = Try(reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate)))
 
-        val reportName = report(reportTemplate)
-        UtilsIO.write(reportName, output)
-        log.debug(s"Report $reportName created")
+      tryOutput match {
+        case Success(output) =>
+          val reportName = report(reportTemplate)
+          UtilsIO.write(reportName, output)
+          log.debug(s"Report $reportName created")
+          reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
 
-        reportActor ! ReportGenerated(Report(reportId, output))
-      } catch {
-        case e: Throwable => reportActor ! ReportError(reportId, e.getMessage)
+        case Failure(e) =>
+          reportActor ! ReportError(reportId, e.getMessage)
       }
   }
 }
@@ -53,6 +55,8 @@ object ReportGenerator {
     writer.close()
     new ByteArrayInputStream(outputStream.toByteArray)
   }
+
+  def contentType: String = "application/pdf"
 
   def report(template: String): String =
     s"${template.split("\\.")(0)}${reportDateFormat.format(LocalDate.now)}.pdf"

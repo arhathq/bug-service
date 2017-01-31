@@ -2,6 +2,8 @@ package bugapp.repository
 
 import java.time.OffsetDateTime
 
+import bugapp.bugzilla.Metrics
+
 import scala.concurrent.Future
 
 trait BugRepository {
@@ -28,7 +30,15 @@ case class Bug(id: Int,
                hardware: String,
                history: Option[BugHistory],
                stats: BugStats
-              )
+              ) {
+
+  def actualDate: OffsetDateTime = stats.status match {
+    case Metrics.OpenStatus => opened
+    case Metrics.FixedStatus => stats.resolvedTime.get
+    case Metrics.InvalidStatus => stats.resolvedTime.get
+  }
+
+}
 case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])
 case class HistoryItem(when: OffsetDateTime, who: String, changes: Seq[HistoryItemChange])
 case class HistoryItemChange(removed: String, added: String, field: String)

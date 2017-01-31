@@ -243,6 +243,45 @@ public class ChartGenerator {
         return toBase64(generateBugsFromLast15Weeks(dataset));
     }
 
+    public static byte[] generateBugsFromLast15Weeks1(CategoryDataset dataset) throws Exception {
+        JFreeChart chart = ChartFactory.createStackedBarChart(
+                "Prod Support Bugs - Last 15 Weeks",
+                "", "Bug Count",
+                dataset, PlotOrientation.VERTICAL,
+                true, true, false
+        );
+
+        LegendTitle legend = chart.getLegend();
+        legend.setPosition(RectangleEdge.RIGHT);
+
+        CategoryPlot plot = (CategoryPlot) chart.getPlot();
+        plot.setForegroundAlpha(0.8f);
+
+        plot.setNoDataMessage("No data to display");
+
+        final CategoryAxis domainAxis = plot.getDomainAxis();
+        domainAxis.setLowerMargin(0.0);
+        domainAxis.setUpperMargin(0.0);
+        domainAxis.setTickLabelsVisible(false);
+
+        // change the auto tick unit selection to integer units only...
+        final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
+        rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
+
+        BarRenderer renderer = (BarRenderer) plot.getRenderer();
+        renderer.setSeriesPaint(0, ChartColor.DARK_GRAY);
+        renderer.setSeriesPaint(1, ChartColor.LIGHT_BLUE);
+        renderer.setSeriesPaint(2, ChartColor.LIGHT_RED);
+
+        renderer.setBaseItemLabelsVisible(true);
+
+        return chartToBytes(1024, 600, chart);
+    }
+
+    public static String generateBase64BugsFromLast15Weeks1(CategoryDataset dataset) throws Exception {
+        return toBase64(generateBugsFromLast15Weeks1(dataset));
+    }
+
     /*
         <New>
             <2015-06-01>1</2015-06-01>

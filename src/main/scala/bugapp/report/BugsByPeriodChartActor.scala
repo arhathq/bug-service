@@ -1,6 +1,7 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
@@ -20,12 +21,13 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     case ReportDataRequest(reportId, reportParams, bugs) =>
 
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
-      val startDate = endDate.minusWeeks(weeks)
+      val startDate = endDate.minusWeeks(weeks).truncatedTo(ChronoUnit.DAYS)
 
-      val filteredBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
+      val filteredBugs = bugs.filter {bug => bug.actualDate.isAfter(startDate) && bug.actualDate.isBefore(endDate)}
+      log.debug(s"Filtered bugs number: ${filteredBugs.size}")
 
       val weeklyBugs: Map[String, Map[String, Seq[Bug]]] = filteredBugs.groupBy { bug =>
-        bug.stats.openMonth
+        Metrics.weekFormat(bug.actualDate)
       }. map { tuple =>
         val week = tuple._1
         val bugs = tuple._2
@@ -39,20 +41,22 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
         val openedBugsNumber = bugs.getOrElse(Metrics.OpenStatus, Seq()).length
         (closedBugsNumber, invalidBugsNumber, openedBugsNumber)
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
+      log.debug(s"Total bug number: $totalBugNumber")
+
+      val marks = Metrics.marksByDates(startDate, endDate)
 
       val data =
         model.ReportData(s"bugs-by-weeks-$weeks",
           MapValue(
-            weeklyBugsData(weeklyBugs),
-            chartData(weeklyBugs)
+            weeklyBugsData(marks, weeklyBugs),
+            chartData(marks, weeklyBugs)
           )
         )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def weeklyBugsData(bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
-    val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
+  private def weeklyBugsData(marks: Seq[String], bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
     val marksData = ReportField("header",
       MapValue(
         marks.map(week => ReportField(s"w$week", StringValue(week))): _*
@@ -98,8 +102,8 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     ReportField("weekly-bugs",
       MapValue(
         marksData,
-        fixedData,
         openData,
+        fixedData,
         invalidData
       )
     )
@@ -113,21 +117,20 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     }
   }
 
-  private def chartData(bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
+  private def chartData(marks: Seq[String], bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {
     val dataSet = new DefaultCategoryDataset()
 
-    val marks = bugs.keys.toSeq.sortWith((v1, v2) => v1 < v2)
     marks.foreach { mark =>
       val bugsByStatus = bugs.getOrElse(mark, Map())
+      dataSet.addValue(bugsByStatus.getOrElse(Metrics.InvalidStatus, Seq()).length, "Invalid", mark)
       dataSet.addValue(bugsByStatus.getOrElse(Metrics.FixedStatus, Seq()).length, "Closed", mark)
       dataSet.addValue(bugsByStatus.getOrElse(Metrics.OpenStatus, Seq()).length, "Open", mark)
-      dataSet.addValue(bugsByStatus.getOrElse(Metrics.InvalidStatus, Seq()).length, "Invalid", mark)
     }
 
     ReportField("image",
       MapValue(
         ReportField("content-type", StringValue("image/jpeg")),
-        ReportField("content-value", StringValue(ChartGenerator.generateBase64BugsFromLast15Weeks(dataSet)))
+        ReportField("content-value", StringValue(ChartGenerator.generateBase64BugsFromLast15Weeks1(dataSet)))
       )
     )
   }
