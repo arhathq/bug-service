@@ -1,6 +1,7 @@
 package bugapp.report
 
 import java.time.OffsetDateTime
+import java.time.temporal.ChronoUnit
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
@@ -19,9 +20,10 @@ class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends Actor with Ac
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
-      val startDate = endDate.minusWeeks(1)
+      val startDate = endDate.minusWeeks(1).truncatedTo(ChronoUnit.DAYS)
 
-      val weeklyBugs = bugs.filter(bug => bug.opened.isAfter(startDate))
+      val weeklyBugs = bugs.filter {bug => bug.actualDate.isAfter(startDate) && bug.actualDate.isBefore(endDate)}
+      log.debug(s"Filtered bugs number: ${weeklyBugs.size}")
       val bugsByPriority = weeklyBugs.groupBy(bug => bug.priority)
 
       val priorityBugsNumValue =

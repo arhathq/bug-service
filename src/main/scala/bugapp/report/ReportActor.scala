@@ -12,6 +12,7 @@ import bugapp.report.ReportGenerator.GenerateReport
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
+import scala.util.{Failure, Success}
 import scala.xml.{Elem, Node, Null, TopScope}
 
 /**
@@ -35,24 +36,32 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
     case GetReport(reportType, startDate, endDate, weekPeriod) =>
       log.info(s"Period: [$startDate - $endDate]")
       if (senders.size >= maxJobs)
-        sender !  ReportResult(report = None, error = Some(s"Max reports is limited: $maxJobs"))
+        sender !  ReportResult(report = None, error = Some(ReportError("", s"Max reports is limited: $maxJobs")))
       else {
         val reportId = newReportId
         senders += reportId -> sender
         val bugsFuture = bugRepository.getBugs
 
-        bugsFuture.foreach { bugs =>
-          val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
-          reportDataBuilders += (reportId -> reportDataBuilder)
-          val reportParams = Map[String, Any](
-            ReportParams.ReportType -> reportType,
-            ReportParams.StartDate -> startDate,
-            ReportParams.EndDate -> endDate,
-            ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
-            ReportParams.WeekPeriod -> weekPeriod,
-            ReportParams.ExcludedComponents -> excludedComponents
-          )
-          reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
+        bugsFuture.onComplete {
+          case Success(bugs) =>
+            val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
+            reportDataBuilders += (reportId -> reportDataBuilder)
+            val reportParams = Map[String, Any](
+              ReportParams.ReportType -> reportType,
+              ReportParams.StartDate -> startDate,
+              ReportParams.EndDate -> endDate,
+              ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
+              ReportParams.WeekPeriod -> weekPeriod,
+              ReportParams.ExcludedComponents -> excludedComponents
+            )
+            reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
+
+          case Failure(t) =>
+            senders.remove(reportId) match {
+              case Some(sender) =>
+                sender ! ReportResult(report = None, error = Some(ReportError(reportId, t.getMessage)))
+              case None =>
+            }
         }
       }
 
@@ -80,8 +89,6 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
       log.debug(s"Number of pending requests after resend: ${pendingRequests.size}")
   }
 
-  def newReportId: String = UUID.randomUUID().toString
-
   private def handleReportEvent(event: ReportEvent) = event match {
     case ReportData(reportId, reportType, result) =>
       val template = reportTemplate(reportType)
@@ -92,17 +99,18 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
     case ReportGenerated(report) =>
       senders.remove(report.reportId) match {
-        case Some(sender) => sender ! ReportResult(Some(report.data))
+        case Some(sender) => sender ! ReportResult(Some(report))
         case None =>
       }
 
-    case ReportError(reportId, message) =>
+    case error @ ReportError(reportId, _) =>
       senders.remove(reportId) match {
-        case Some(sender) => sender ! ReportResult(report = None, error = Some(message))
+        case Some(sender) => sender ! ReportResult(report = None, error = Some(error))
         case None =>
       }
 
   }
+
 }
 
 object ReportActor {
@@ -112,11 +120,13 @@ object ReportActor {
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
 
+  def newReportId: String = UUID.randomUUID().toString
+
   def formatNumber(number: Int): String = if (number == 0) "" else number.toString
   def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
 
   case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
-  case class ReportResult(report: Option[Array[Byte]], error: Option[String] = None)
+  case class ReportResult(report: Option[Report], error: Option[ReportError] = None)
 
   trait ReportEvent
   case class ReportData(reportId: String, reportType: String, result: Elem) extends ReportEvent
