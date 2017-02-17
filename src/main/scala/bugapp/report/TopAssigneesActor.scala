@@ -3,7 +3,7 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-import bugapp.report.model.{IntValue, MapValue, ReportField, StringValue}
+import bugapp.report.model._
 
 
 /**
@@ -21,19 +21,17 @@ class TopAssigneesActor(owner: ActorRef) extends Actor with ActorLogging {
       val data =
         model.ReportData("top-asignees",
           MapValue(
-            topBugAssignees.map(topBugsAssigneeData): _*
+            ReportField("asignee", ListValue(topBugAssignees.map(topBugsAssigneeData): _*))
           )
         )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def topBugsAssigneeData(assignee: (String, Int)): ReportField = {
-    ReportField("asignee",
-      MapValue(
-        ReportField("name", StringValue(assignee._1)),
-        ReportField("count", IntValue(assignee._2))
-      )
+  def topBugsAssigneeData(assignee: (String, Int)): MapValue = {
+    MapValue(
+      ReportField("name", StringValue(assignee._1)),
+      ReportField("count", IntValue(assignee._2))
     )
   }
 }

@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.ReportActor.dateTimeFormat
-import bugapp.report.model.{IntValue, MapValue, ReportField, StringValue}
+import bugapp.report.model._
 import bugapp.repository.Bug
 
 
@@ -23,21 +23,24 @@ class OpenTopBugListActor (owner: ActorRef) extends Actor with ActorLogging {
 
       val openBugsData = p1OpenBugs.map(bugData) ++ p2OpenBugs.map(bugData)
 
-      val data = model.ReportData("open-bugs", MapValue(openBugsData: _*))
+      val data =
+        model.ReportData("open-bugs",
+          MapValue(
+            ReportField("bug", ListValue(openBugsData: _*))
+          )
+        )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def bugData(bug: Bug): ReportField = {
-    ReportField("bug",
-      MapValue(
-        ReportField("id", IntValue(bug.id)),
-        ReportField("priority", StringValue(bug.priority)),
-        ReportField("opened", StringValue(dateTimeFormat.format(bug.opened))),
-        ReportField("summary", StringValue(bug.summary)),
-        ReportField("client", StringValue(bug.hardware)),
-        ReportField("product", StringValue(bug.product))
-      )
+  def bugData(bug: Bug): MapValue = {
+    MapValue(
+      ReportField("id", IntValue(bug.id)),
+      ReportField("priority", StringValue(bug.priority)),
+      ReportField("opened", StringValue(dateTimeFormat.format(bug.opened))),
+      ReportField("summary", StringValue(bug.summary)),
+      ReportField("client", StringValue(bug.hardware)),
+      ReportField("product", StringValue(bug.product))
     )
   }
 

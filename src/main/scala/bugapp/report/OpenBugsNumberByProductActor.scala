@@ -4,7 +4,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-import bugapp.report.model.{MapValue, ReportField, StringValue}
+import bugapp.report.model.{ListValue, MapValue, ReportField, StringValue}
 
 /**
   * @author Alexander Kuleshov
@@ -31,26 +31,28 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogg
           map(tuple => productBugsData(tuple._1, tuple._2)) :+
           productBugsData("Grand Total", totalBugCountByPriority)
 
-      val data = model.ReportData("open-bugs-by-product", MapValue(productBugsValue: _*))
+      val data = model.ReportData("open-bugs-by-product",
+        MapValue(
+          ReportField("product-bugs", ListValue(productBugsValue: _*))
+        )
+      )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def productBugsData(product: String, data: Map[String, Int]): ReportField = {
+  def productBugsData(product: String, data: Map[String, Int]): MapValue = {
     val p1Count = data.getOrElse(Metrics.P1Priority, 0)
     val p2Count = data.getOrElse(Metrics.P2Priority, 0)
     val p3Count = data.getOrElse(Metrics.P3Priority, 0)
     val npCount = data.getOrElse(Metrics.NPPriority, 0)
 
-    ReportField("product-bugs",
-      MapValue(
-        ReportField("product", StringValue(product)),
-        ReportField("np", StringValue(formatNumber(npCount))),
-        ReportField("p1", StringValue(formatNumber(p1Count))),
-        ReportField("p2", StringValue(formatNumber(p2Count))),
-        ReportField("p3", StringValue(formatNumber(p3Count))),
-        ReportField("total", StringValue(formatNumber(p1Count + p2Count + p3Count + npCount)))
-      )
+    MapValue(
+      ReportField("product", StringValue(product)),
+      ReportField("np", StringValue(formatNumber(npCount))),
+      ReportField("p1", StringValue(formatNumber(p1Count))),
+      ReportField("p2", StringValue(formatNumber(p2Count))),
+      ReportField("p3", StringValue(formatNumber(p3Count))),
+      ReportField("total", StringValue(formatNumber(p1Count + p2Count + p3Count + npCount)))
     )
   }
 

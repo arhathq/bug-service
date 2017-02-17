@@ -34,16 +34,20 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
         prioritizedBugsData(Metrics.P2Priority, p2OpenBugs),
         prioritizedBugsData(Metrics.P3Priority, p3OpenBugs),
         prioritizedBugsData(Metrics.P4Priority, p4OpenBugs),
-        prioritizedBugsData("Grand Total", openBugs),
-        ReportField("excludedComponents", StringValue(excludedComponents.mkString("\'", "\', \'", "\'")))
+        prioritizedBugsData("Grand Total", openBugs)
       )
 
-      val data = ReportData("all-open-bugs", MapValue(allOpenBugsData: _*))
+      val data = model.ReportData("all-open-bugs",
+        MapValue(
+          ReportField("prioritized-bugs", ListValue(allOpenBugsData: _*)),
+          ReportField("excludedComponents", StringValue(excludedComponents.mkString("\'", "\', \'", "\'")))
+        )
+      )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  def prioritizedBugsData(priority: String, bugs: Seq[Bug]): ReportField = {
+  def prioritizedBugsData(priority: String, bugs: Seq[Bug]): MapValue = {
     val data = splitBugsByOpenPeriod(bugs).map(tuple => tuple._1 -> tuple._2.length)
 
     val prioritizedBugsValue =
@@ -51,7 +55,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with Actor
         data.map(tuple => ReportField(s"${tuple._1}", StringValue(tuple._2.toString))) :+
         ReportField("total", StringValue(formatNumber(data.map(_._2).sum)))
 
-    ReportField("prioritized-bugs", MapValue(prioritizedBugsValue: _*))
+    MapValue(prioritizedBugsValue: _*)
   }
 
 }

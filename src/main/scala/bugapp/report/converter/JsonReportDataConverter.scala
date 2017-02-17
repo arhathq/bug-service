@@ -9,8 +9,12 @@ import io.circe.syntax._
   *
   */
 class JsonReportDataConverter extends ReportDataConverter[JsonC] {
+  import JsonReportDataConverter._
 
   override def convert(value: ReportData): JsonC = value.asJson
+}
+
+object JsonReportDataConverter {
 
   lazy implicit val reportEncoder: Encoder[ReportData] = Encoder.instance {
     case ReportData(name, fields) => JsonC.obj((name, fields.asJson))

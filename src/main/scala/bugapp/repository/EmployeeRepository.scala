@@ -1,6 +1,6 @@
 package bugapp.repository
 
-import java.io.File
+import java.nio.file.Paths
 
 import bugapp.EmployeeConfig
 
@@ -20,7 +20,7 @@ class FileEmployeeRepository extends EmployeeRepository with EmployeeConfig {
 
   private val employees = mutable.Map.empty[String, Employee]
 
-  Source.fromFile(new File(repositoryPath)).getLines.foreach { line =>
+  Source.fromFile(Paths.get(repositoryPath).toFile).getLines.foreach { line =>
     val values = line.split(",").map(_.trim)
     val email = values(0)
     val department = values(1)

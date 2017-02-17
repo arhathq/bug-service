@@ -9,6 +9,7 @@ import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
 import bugapp.report.ReportDataBuilder.GetReportData
 import bugapp.report.ReportGenerator.GenerateReport
+import bugapp.report.converter.XmlReportDataConverter
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
@@ -28,7 +29,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
   private val pendingRequests = mutable.Set.empty[(GetReport, ActorRef)]
 
   private val reportDataBuilders = mutable.Map.empty[String, ActorRef]
-  private val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, self), "reportGenerator")
+  private val reportDataConverter = new XmlReportDataConverter()
+  private val reportBuilder = context.actorOf(ReportGenerator.props(fopConf, reportDir, self), "reportGenerator")
 
   override def receive: Receive = reportManagement
 
@@ -95,7 +97,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
       reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
         reportDataBuilder ! PoisonPill
       }
-      reportBuilder ! GenerateReport(reportId, template, result)
+      reportBuilder ! GenerateReport(reportId, template, reportDataConverter.convert(result))
 
     case ReportGenerated(report) =>
       senders.remove(report.reportId) match {
@@ -129,7 +131,7 @@ object ReportActor {
   case class ReportResult(report: Option[Report], error: Option[ReportError] = None)
 
   trait ReportEvent
-  case class ReportData(reportId: String, reportType: String, result: Elem) extends ReportEvent
+  case class ReportData(reportId: String, reportType: String, result: model.ReportData) extends ReportEvent
   case class ReportGenerated(report: Report) extends ReportEvent
   case class ReportError(reportId: String, message: String) extends ReportEvent
 

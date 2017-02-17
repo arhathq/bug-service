@@ -9,7 +9,7 @@ import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import bugapp.bugzilla.{BugzillaActor, BugzillaRepository, RepositoryEventBus}
 import bugapp.http.HttpClient
-import bugapp.report.ReportActor
+import bugapp.report.{OnlineReportActor, ReportActor}
 
 import scala.concurrent.ExecutionContext
 
@@ -32,10 +32,14 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   private val bugRepository = new BugzillaRepository(bugzillaActor)
 
-  private val reportActor = system.actorOf(ReportActor.props(bugRepository, repositoryEventBus, excludedComponents ++ excludedProducts), "reportActor")
+  val componentExclusions = excludedComponents ++ excludedProducts
+
+  private val reportActor = system.actorOf(ReportActor.props(bugRepository, repositoryEventBus, componentExclusions), "reportActor")
   repositoryEventBus.subscribe(reportActor, RepositoryEventBus.RequestType)
 
-  private val restService = new RestApiService(bugRepository, reportActor)
+  private val onlineActor = system.actorOf(OnlineReportActor.props(bugRepository, componentExclusions), "onlineActor")
+
+  private val restService = new RestApiService(bugRepository, reportActor, onlineActor)
 
   log.debug("Starting App...")
 

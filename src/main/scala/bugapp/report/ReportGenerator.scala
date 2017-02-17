@@ -15,7 +15,7 @@ import scala.xml.{Elem, XML}
 /**
   * Created by arhathq on 28.08.2016.
   */
-class ReportGenerator(fopConf: String, reportActor: ActorRef) extends Actor with ActorLogging {
+class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef) extends Actor with ActorLogging {
   import bugapp.report.ReportGenerator._
 
   val reportGenerator: FopReportGenerator = new FopReportGenerator(new URI(fopConf))
@@ -26,7 +26,7 @@ class ReportGenerator(fopConf: String, reportActor: ActorRef) extends Actor with
 
       tryOutput match {
         case Success(output) =>
-          val reportName = report(reportTemplate)
+          val reportName = report(reportDir, reportTemplate)
           UtilsIO.write(reportName, output)
           log.debug(s"Report $reportName created")
           reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
@@ -43,8 +43,8 @@ object ReportGenerator {
 
   case class GenerateReport(reportId: String, reportTemplate: String, source: Elem)
 
-  def props(fopConf: String, reportActor: ActorRef) =
-    Props(classOf[ReportGenerator], fopConf, reportActor)
+  def props(fopConf: String, reportDir: String, reportActor: ActorRef) =
+    Props(classOf[ReportGenerator], fopConf, reportDir, reportActor)
 
   def inputStream(path: String): InputStream = new FileInputStream(path)
 
@@ -58,6 +58,6 @@ object ReportGenerator {
 
   def contentType: String = "application/pdf"
 
-  def report(template: String): String =
-    s"${template.split("\\.")(0)}${reportDateFormat.format(LocalDate.now)}.pdf"
+  def report(dir: String, template: String): String =
+    s"$dir/${template.split("\\.")(0)}${reportDateFormat.format(LocalDate.now)}.pdf"
 }

@@ -51,10 +51,7 @@ class BugzillaActor(httpClient: HttpClient, repositoryEventBus: RepositoryEventB
 
       senders.add(sender)
 
-      val endDate = BugApp.toDate
-      val startDate = BugApp.fromDate(endDate, fetchPeriod)
-      val currentWeek = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
-      log.debug(s"Scheduled for data with params [startDate=$startDate; endDate=$endDate; currentWeek=$currentWeek; periodInWeeks=$fetchPeriod]")
+      log.debug(s"Scheduled for data")
 
       val rawFile = rootPath + "/bugzilla.json.tmp"
 

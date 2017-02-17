@@ -7,7 +7,7 @@ import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-import bugapp.report.model.{MapValue, ReportField, StringValue}
+import bugapp.report.model.{ListValue, MapValue, ReportField, StringValue}
 import bugapp.repository.{Bug, Employee, EmployeeRepository}
 
 
@@ -56,20 +56,22 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
 
       val reporterBugsValues = reporterBugsValue :+ reporterBugsData("Grand Total", totalBugNumber._1, totalBugNumber._2, totalBugNumber._3)
 
-      val data = model.ReportData(s"reporter-bugs-by-weeks-$weeks", MapValue(reporterBugsValues: _*))
+      val data = model.ReportData(s"reporter-bugs-by-weeks-$weeks",
+        MapValue(
+          ReportField("reporter-bugs", ListValue(reporterBugsValues: _*))
+        )
+      )
 
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def reporterBugsData(department: String, closed: Int, invalid: Int, opened: Int): ReportField = {
-    ReportField("reporter-bugs",
-      MapValue(
-        ReportField("reporter", StringValue(department)),
-        ReportField("closed", StringValue(formatNumber(closed))),
-        ReportField("invalid", StringValue(formatNumber(invalid))),
-        ReportField("opened", StringValue(formatNumber(opened))),
-        ReportField("total", StringValue(formatNumber(closed + invalid + opened)))
-      )
+  private def reporterBugsData(department: String, closed: Int, invalid: Int, opened: Int): MapValue = {
+    MapValue(
+      ReportField("reporter", StringValue(department)),
+      ReportField("closed", StringValue(formatNumber(closed))),
+      ReportField("invalid", StringValue(formatNumber(invalid))),
+      ReportField("opened", StringValue(formatNumber(opened))),
+      ReportField("total", StringValue(formatNumber(closed + invalid + opened)))
     )
   }
 }

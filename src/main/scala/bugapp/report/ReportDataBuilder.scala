@@ -3,7 +3,6 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
 import bugapp.report.ReportActor.ReportData
-import bugapp.report.converter.XmlReportDataConverter
 import bugapp.report.model.{MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 
@@ -77,9 +76,7 @@ class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
             )
           )
 
-        val reportDataConverter = new XmlReportDataConverter()
-
-        ReportData(reportId, reportType, reportDataConverter.convert(result))
+        ReportData(reportId, reportType, result)
     }
   }
 

@@ -53,7 +53,6 @@ trait BugzillaConfig extends Config {
 
   val searchStartDate = OffsetDateTime.parse(bugzillaConfig.getString("start-date"))
   val bugLimit = bugzillaConfig.getInt("bug-limit")
-  val fetchPeriod = bugzillaConfig.getInt("fetch-period-in-weeks")
   val rootPath = bugzillaConfig.getString("repository-path")
   val repositoryFile = bugzillaConfig.getString("repository-file")
   val fetchTimeout = bugzillaConfig.getInt("fetch-timeout")

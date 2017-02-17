@@ -64,7 +64,7 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
     )
 
     val fixed = weeklyBugsData(Metrics.FixedStatus, marks, bugs)
-    val fixedData = ReportField("row",
+    val fixedData =
       MapValue(
         ReportField("name", StringValue("Closed")),
         ReportField("value",
@@ -73,10 +73,9 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
           )
         )
       )
-    )
 
     val open = weeklyBugsData(Metrics.OpenStatus, marks, bugs)
-    val openData = ReportField("row",
+    val openData =
       MapValue(
         ReportField("name", StringValue("Open")),
         ReportField("value",
@@ -85,10 +84,9 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
           )
         )
       )
-    )
 
     val invalid = weeklyBugsData(Metrics.InvalidStatus, marks, bugs)
-    val invalidData = ReportField("row",
+    val invalidData =
       MapValue(
         ReportField("name", StringValue("Invalid")),
         ReportField("value",
@@ -97,15 +95,19 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends Actor with Act
           )
         )
       )
-    )
 
     ReportField("weekly-bugs",
       MapValue(
         marksData,
-        openData,
-        fixedData,
-        invalidData
+        ReportField("row",
+          ListValue(
+            openData,
+            fixedData,
+            invalidData
+          )
+        )
       )
+
     )
   }
 
