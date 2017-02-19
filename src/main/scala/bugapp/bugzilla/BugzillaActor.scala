@@ -12,8 +12,8 @@ import akka.util.ByteString
 import bugapp.{BugApp, BugzillaConfig, UtilsIO}
 import bugapp.http.HttpClient
 import bugapp.Implicits._
+import bugapp.stream.CirceStreamSupport
 import bugapp.repository._
-import de.knutwalker.akka.stream.support.CirceStreamSupport
 
 import scala.collection.mutable
 import scala.concurrent._

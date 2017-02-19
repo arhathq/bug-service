@@ -13,7 +13,7 @@ import akka.stream._
 import akka.stream.scaladsl._
 import bugapp.bugzilla._
 import bugapp.Implicits._
-import de.knutwalker.akka.stream.support.CirceStreamSupport
+import bugapp.stream.CirceStreamSupport
 import org.scalatest.FunSuite
 
 /**
@@ -68,7 +68,7 @@ class AkkaStreamTests extends FunSuite with AkkaConfig with CirceStreamSupport {
 
 
   }
-
+/*
   test("Custom source") {
     implicit val system = ActorSystem()
     implicit val ec = system.dispatcher
@@ -96,7 +96,7 @@ class AkkaStreamTests extends FunSuite with AkkaConfig with CirceStreamSupport {
     val result1 = Await.result(future1, 80.seconds)
     println(result1)
   }
-
+*/
 /*
   test("File to File streaming") {
     implicit val system = ActorSystem()

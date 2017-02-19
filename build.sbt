@@ -4,10 +4,12 @@ version := "1.0"
 
 scalaVersion := "2.11.8"
 
+mainClass in Compile := Some("bugapp.BugApp")
+
 libraryDependencies ++= {
-  val akkaVersion         = "2.4.14"
-  val akkaHttpVersion     = "10.0.0"
-  val circeVersion        = "0.5.4"
+  val akkaVersion         = "2.4.17"
+  val akkaHttpVersion     = "10.0.3"
+  val circeVersion        = "0.7.0"
   val scalaTestVersion    = "2.2.6"
   val scalaAsyncVersion   = "0.9.5"
   val scalaXmlVersion     = "1.0.4"
@@ -17,15 +19,13 @@ libraryDependencies ++= {
     "com.typesafe.akka"      %% "akka-http-spray-json"              % akkaHttpVersion,
     "com.typesafe.akka"      %% "akka-http"                         % akkaHttpVersion,
     "com.typesafe.akka"      %% "akka-slf4j"                        % akkaVersion,
+    "com.typesafe.akka"      %% "akka-stream"                       % akkaVersion,
 
-    "com.enragedginger"      %% "akka-quartz-scheduler"             % "1.5.0-akka-2.4.x",
+    "com.enragedginger"      %% "akka-quartz-scheduler"             % "1.6.0-akka-2.4.x",
 
     "ch.qos.logback"          % "logback-classic"                   % "1.1.3",
 
-    "de.heikoseeberger"      %% "akka-http-circe"                   % "1.6.0",
-
-    "de.knutwalker"          %% "akka-stream-circe"                 % "3.1.0",
-    "de.knutwalker"          %% "akka-http-circe"                   % "3.1.0",
+    "de.heikoseeberger"      %% "akka-http-circe"                   % "1.12.0",
 
     "io.circe"               %% "circe-core"                        % circeVersion,
     "io.circe"               %% "circe-generic"                     % circeVersion,
@@ -50,3 +50,5 @@ libraryDependencies ++= {
     "junit"                   % "junit"                             % "4.11"               % "test"
   )
 }
+
+assemblyJarName in assembly := "bugs.jar"

@@ -11,10 +11,10 @@ import akka.stream.scaladsl.{FileIO, Sink}
 import akka.util.Timeout
 import bugapp._
 import bugapp.Implicits._
+import bugapp.stream.CirceStreamSupport
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
 import bugapp.repository.{Bug, BugHistory, BugRepository}
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
-import de.knutwalker.akka.stream.support.CirceStreamSupport
 
 import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration._

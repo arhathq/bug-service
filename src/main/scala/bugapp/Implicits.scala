@@ -12,10 +12,10 @@ import io.circe.syntax._
   *
   */
 object Implicits {
-  implicit val offsetDateTimeEncoder: Encoder[OffsetDateTime] = Encoder.instance(a => a.toString.asJson)
-  implicit val offsetDateTimeDecoder: Decoder[OffsetDateTime] = Decoder.instance(a => a.as[String].map(OffsetDateTime.parse(_)))
-  implicit val localDateEncoder: Encoder[LocalDate] = Encoder.instance(a => a.toString.asJson)
-  implicit val localDateDecoder: Decoder[LocalDate] = Decoder.instance(a => a.as[String].map(LocalDate.parse(_)))
+  implicit val offsetDateTimeEncoder: Encoder[OffsetDateTime] = Encoder.instance(a => a.asJson)
+  implicit val offsetDateTimeDecoder: Decoder[OffsetDateTime] = Decoder.instance(a => a.as[String].right.map(OffsetDateTime.parse(_)))
+  implicit val localDateEncoder: Encoder[LocalDate] = Encoder.instance(a => a.asJson)
+  implicit val localDateDecoder: Decoder[LocalDate] = Decoder.instance(a => a.as[String].right.map(LocalDate.parse(_)))
 
   implicit val encoderBugzillaBug = deriveEncoder[BugzillaBug]
   implicit val decoderBugzillaBug = deriveDecoder[BugzillaBug]
