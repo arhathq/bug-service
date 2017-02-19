@@ -36,7 +36,7 @@ class CirceJsonTests extends FunSuite {
   object Bar {
     implicit val decodeB: Decoder[Bar] = Decoder.instance(c =>
       for {
-        id <- c.downField("q").as[String]
+        id <- c.downField("q").as[String].right
       } yield Bar(id)
     )
   }
@@ -84,7 +84,7 @@ class CirceJsonTests extends FunSuite {
         }
       }"""
 
-    val doc: Json = parse(json).getOrElse(Json.Null)
+    val doc: Json = parse(json).right.getOrElse(Json.Null)
 
     val cursor: HCursor = doc.hcursor
 
@@ -102,11 +102,11 @@ class CirceJsonTests extends FunSuite {
 
     val arrayQux: Decoder.Result[Array[String]] =
       cursor.downField("values").downField("qux").as[Array[String]]
-    println(arrayQux.getOrElse(Array()).length)
+    println(arrayQux.right.getOrElse(Array()).length)
 
     val arrayBugs: Decoder.Result[Array[Bar]] =
       cursor.downField("values").downField("result").downField("bugs").as[Array[Bar]]
-    println(arrayBugs.getOrElse(Array[Bar]()).length)
+    println(arrayBugs.right.getOrElse(Array[Bar]()).length)
   }
 
   test("Scala Collections to Json") {

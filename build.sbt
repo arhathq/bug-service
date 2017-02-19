@@ -47,7 +47,9 @@ libraryDependencies ++= {
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
     "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test",
 
-    "junit"                   % "junit"                             % "4.11"               % "test"
+    "junit"                   % "junit"                             % "4.11"               % "test",
+
+    "javax.mail"              % "javax.mail-api"                    % "1.5.1"
   )
 }
 
