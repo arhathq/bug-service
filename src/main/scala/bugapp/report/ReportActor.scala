@@ -35,18 +35,18 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
   override def receive: Receive = reportManagement
 
   def reportManagement: Receive = {
-    case GetReport(reportType, startDate, endDate, weekPeriod) =>
+    case request@GetReport(reportType, startDate, endDate, weekPeriod) =>
       log.info(s"Period: [$startDate - $endDate]")
       if (senders.size >= maxJobs)
         sender !  ReportResult(report = None, error = Some(ReportError("", s"Max reports is limited: $maxJobs")))
       else {
-        val reportId = newReportId
+        val reportId = request.reportId
         senders += reportId -> sender
         val bugsFuture = bugRepository.getBugs
 
         bugsFuture.onComplete {
           case Success(bugs) =>
-            val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self))
+            val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self, WorkersFactory.Report))
             reportDataBuilders += (reportId -> reportDataBuilder)
             val reportParams = Map[String, Any](
               ReportParams.ReportType -> reportType,
@@ -122,15 +122,15 @@ object ReportActor {
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
 
-  def newReportId: String = UUID.randomUUID().toString
-
   def formatNumber(number: Int): String = if (number == 0) "" else number.toString
   def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
 
-  case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int)
+  case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
+    val reportId: String = UUID.randomUUID().toString
+  }
   case class ReportResult(report: Option[Report], error: Option[ReportError] = None)
 
-  trait ReportEvent
+  sealed trait ReportEvent
   case class ReportData(reportId: String, reportType: String, result: model.ReportData) extends ReportEvent
   case class ReportGenerated(report: Report) extends ReportEvent
   case class ReportError(reportId: String, message: String) extends ReportEvent

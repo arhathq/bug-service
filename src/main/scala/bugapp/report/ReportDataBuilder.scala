@@ -3,6 +3,7 @@ package bugapp.report
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
 import bugapp.report.ReportActor.ReportData
+import bugapp.report.WorkersFactory.WorkersType
 import bugapp.report.model.{MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
 
@@ -11,14 +12,14 @@ import scala.collection.mutable
 /**
   * Created by arhathq on 04.08.2016.
   */
-class ReportDataBuilder(reportActor: ActorRef) extends Actor with ActorLogging {
+class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) extends Actor with ActorLogging {
   import ReportDataBuilder._
 
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
   private val requests = mutable.Map.empty[String, Map[String, Any]]
   private val data = mutable.Map.empty[String, List[model.ReportData]]
 
-  private val reportWorkers = new ReportWorkers(context)
+  private val reportWorkers = WorkersFactory.createWorkers(reportWorkersType, context)
 
   override def receive: Receive = {
     case GetReportData(reportId, reportParams, bugs) =>
@@ -94,5 +95,5 @@ object ReportDataBuilder {
   case class ReportDataRequest(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
   case class ReportDataResponse[T](reportId: String, result: T)
 
-  def props(reportActor: ActorRef) = Props(classOf[ReportDataBuilder], reportActor)
+  def props(reportActor: ActorRef, reportWorkersType: WorkersType) = Props(classOf[ReportDataBuilder], reportActor, reportWorkersType)
 }

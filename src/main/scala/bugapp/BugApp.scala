@@ -9,14 +9,17 @@ import akka.http.scaladsl.Http
 import akka.stream.ActorMaterializer
 import bugapp.bugzilla.{BugzillaActor, BugzillaRepository, RepositoryEventBus}
 import bugapp.http.HttpClient
-import bugapp.report.{OnlineReportActor, ReportActor}
+import bugapp.mail.MailerActor
+import bugapp.report.ReportSender.SendWeeklyReport
+import bugapp.report.{OnlineReportActor, ReportActor, ReportSender}
+import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 
 import scala.concurrent.ExecutionContext
 
 /**
   * @author Alexander Kuleshov
   */
-object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
+object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig with MailerConfig {
 
   private implicit val system = ActorSystem("BugApp", akkaConfig)
   protected implicit val executor: ExecutionContext = system.dispatcher
@@ -39,7 +42,12 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig {
 
   private val onlineActor = system.actorOf(OnlineReportActor.props(bugRepository, componentExclusions), "onlineActor")
 
-  private val restService = new RestApiService(bugRepository, reportActor, onlineActor)
+  private val mailerActor = system.actorOf(MailerActor.props(), "mailerActor")
+  private val reportSender = system.actorOf(ReportSender.props(reportActor, mailerActor), "reportSender")
+
+  private val restService = new RestApiService(bugRepository, reportActor, onlineActor, reportSender)
+
+  QuartzSchedulerExtension(system).schedule("reportSender", reportSender, SendWeeklyReport(15))
 
   log.debug("Starting App...")
 

@@ -1,10 +1,11 @@
 package bugapp
 
 import java.time.OffsetDateTime
+import java.util
+import java.util.Properties
 
 import collection.JavaConverters._
-import com.typesafe.config.ConfigFactory
-import com.typesafe.config.{Config => TypesafeConfig}
+import com.typesafe.config.{ConfigFactory, Config => TypesafeConfig}
 
 trait Config {
 
@@ -33,6 +34,9 @@ trait Config {
         keys.head -> (keys.tail.mkString(".") -> entry.getValue.unwrapped())
       } groupBy(_._1) map(kv => kv._1 -> kv._2.map(kv1 => kv1._2).toMap)
   }
+
+  def optionalValue[T](path: String)(implicit config: TypesafeConfig): Option[T] =
+    if (config.hasPathOrNull(path)) Some(config.getValue(path).asInstanceOf[T]) else None
 }
 
 trait HttpConfig extends Config {
@@ -86,4 +90,26 @@ trait EmployeeConfig extends Config {
   private val employeeConfig = config.getConfig("employees")
 
   val repositoryPath = employeeConfig.getString("path")
+}
+
+trait MailerConfig extends Config {
+
+  private implicit val mailerConfig = config.getConfig("mailer")
+
+  val mailUsername: Option[String] = optionalValue("mail.username")
+  val mailPassword: Option[String] = optionalValue("mail.password")
+  val mailProps = new Properties()
+
+}
+
+trait EmailConfig extends Config {
+
+  private val emailsConfig = config.getConfig("emails")
+
+  val emails = getConfigMap(emailsConfig)
+
+  val from = emailsConfig.getString("from")
+  val to: (String) => Array[String] = (emailId) => emails(emailId)("to").asInstanceOf[util.ArrayList[String]].asScala.toArray
+  val cc: (String) => Array[String] = (emailId) => emails(emailId)("cc").asInstanceOf[util.ArrayList[String]].asScala.toArray
+
 }

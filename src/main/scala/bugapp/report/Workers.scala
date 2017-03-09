@@ -6,13 +6,29 @@ import bugapp.repository.FileEmployeeRepository
 /**
   * Created by arhathq on 20.12.2016.
   */
-class ReportWorkers(context: ActorContext) {
+
+object WorkersFactory {
+  sealed trait WorkersType
+  case object Online extends WorkersType
+  case object Report extends WorkersType
+
+  def createWorkers(id: WorkersType, context: ActorContext) = id match {
+    case Report => new ReportWorkers(context)
+    case Online => new OnlineReportWorkers(context)
+  }
+}
+
+trait Workers {
+  def create(reportType: String): Set[ActorRef]
+}
+
+class ReportWorkers(context: ActorContext) extends Workers {
 
   private val self = context.self
 
   private val employeeRepository = new FileEmployeeRepository
 
-  def create(reportType: String): Set[ActorRef] = reportType match {
+  override def create(reportType: String): Set[ActorRef] = reportType match {
     case "weekly" => Set(
       context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
       context.actorOf(AllOpenBugsNumberByPriorityChartActor.props(self)),
@@ -30,8 +46,12 @@ class ReportWorkers(context: ActorContext) {
       context.actorOf(SlaReportActor.props(self)),
       context.actorOf(BugsOutSlaActor.props(self))
     )
-    case _ => Set()
+    case _ => Set.empty[ActorRef]
   }
+}
 
-
+class OnlineReportWorkers(val context: ActorContext) extends Workers {
+  override def create(reportType: String): Set[ActorRef] = reportType match {
+    case _ => Set.empty[ActorRef]
+  }
 }

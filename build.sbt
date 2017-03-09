@@ -49,7 +49,7 @@ libraryDependencies ++= {
 
     "junit"                   % "junit"                             % "4.11"               % "test",
 
-    "javax.mail"              % "javax.mail-api"                    % "1.5.1"
+    "com.sun.mail"            % "javax.mail"                        % "1.5.5"
   )
 }
 
