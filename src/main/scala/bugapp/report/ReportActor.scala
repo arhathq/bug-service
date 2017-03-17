@@ -13,7 +13,6 @@ import bugapp.report.converter.XmlReportDataConverter
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
-import scala.util.{Failure, Success}
 import scala.xml.{Elem, Node, Null, TopScope}
 
 /**
@@ -42,23 +41,20 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
       else {
         val reportId = request.reportId
         senders += reportId -> sender
-        val bugsFuture = bugRepository.getBugs
-
-        bugsFuture.onComplete {
-          case Success(bugs) =>
-            val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self, WorkersFactory.Report))
-            reportDataBuilders += (reportId -> reportDataBuilder)
-            val reportParams = Map[String, Any](
-              ReportParams.ReportType -> reportType,
-              ReportParams.StartDate -> startDate,
-              ReportParams.EndDate -> endDate,
-              ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
-              ReportParams.WeekPeriod -> weekPeriod,
-              ReportParams.ExcludedComponents -> excludedComponents
-            )
-            reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
-
-          case Failure(t) =>
+        bugRepository.getBugs.map { bugs =>
+          val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self, WorkersFactory.Report))
+          reportDataBuilders += (reportId -> reportDataBuilder)
+          val reportParams = Map[String, Any](
+            ReportParams.ReportType -> reportType,
+            ReportParams.StartDate -> startDate,
+            ReportParams.EndDate -> endDate,
+            ReportParams.BugtrackerUri -> BugApp.bugzillaUrl,
+            ReportParams.WeekPeriod -> weekPeriod,
+            ReportParams.ExcludedComponents -> excludedComponents
+          )
+          reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
+        }.recover {
+          case t: Throwable =>
             senders.remove(reportId) match {
               case Some(sender) =>
                 sender ! ReportResult(report = None, error = Some(ReportError(reportId, t.getMessage)))
@@ -93,11 +89,15 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 
   private def handleReportEvent(event: ReportEvent) = event match {
     case ReportData(reportId, reportType, result) =>
-      val template = reportTemplate(reportType)
-      reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
-        reportDataBuilder ! PoisonPill
+      try {
+        val template = reportTemplate(reportType)
+        reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
+          reportDataBuilder ! PoisonPill
+        }
+        reportBuilder ! GenerateReport(reportId, template, reportDataConverter.convert(result))
+      } catch {
+        case t: Throwable => self ! ReportError(reportId, t.getMessage)
       }
-      reportBuilder ! GenerateReport(reportId, template, reportDataConverter.convert(result))
 
     case ReportGenerated(report) =>
       senders.remove(report.reportId) match {
