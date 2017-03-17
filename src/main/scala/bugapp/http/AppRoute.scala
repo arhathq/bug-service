@@ -14,7 +14,7 @@ import bugapp.report.OnlineReportActor.{CloseConversation, GetOnlineReport, Join
 import bugapp.report.ReportActor._
 import bugapp.report.ReportSender.{Ack, SendWeeklyReport}
 import bugapp.report.converter.JsonReportDataConverter
-import bugapp.report.model
+import bugapp.report.{ReportTypes, model}
 import bugapp.repository.BugRepository
 import io.circe.generic.auto._
 
@@ -36,15 +36,19 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
         }
       }
     } ~
-    path("report" / Segment / "weeks" / IntNumber) { (reportType, weeks) =>
+    path("report" / Segment / "weeks" / IntNumber) { (reportName, weeks) =>
       get {
         val reportDuration = 90.seconds
         withRequestTimeout(reportDuration) {
           extractRequest { req =>
-            implicit val timeout = Timeout(reportDuration)
-            val endDate = BugApp.toDate
-            val startDate = BugApp.fromDate(endDate, weeks)
-            sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult])
+            ReportTypes.from(reportName) match {
+              case Left(error) => sendResponse(Future.failed(new RuntimeException(error)))
+              case Right(reportType) =>
+                implicit val timeout = Timeout(reportDuration)
+                val endDate = BugApp.toDate
+                val startDate = BugApp.fromDate(endDate, weeks)
+                sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult])
+            }
           }
         }
       }
@@ -89,10 +93,14 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
       }
     }
 
-  private def createOnlineRequest(reportType: String, weeks: Int): Future[GetOnlineReport] = {
+  private def createOnlineRequest(reportName: String, weeks: Int): Future[GetOnlineReport] = {
     val endDate = BugApp.toDate
     val startDate = BugApp.fromDate(endDate, weeks)
-    Future.successful(GetOnlineReport(reportType, startDate, endDate, weeks))
+
+    ReportTypes.from(reportName) match {
+      case Left(error) => Future.failed(new RuntimeException(error))
+      case Right(reportType) => Future.successful(GetOnlineReport(reportType, startDate, endDate, weeks))
+    }
   }
 
   private def createActorFlow(): Flow[GetOnlineReport, model.ReportData, Any] = {

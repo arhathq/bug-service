@@ -23,7 +23,6 @@ class SlaReportActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogg
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
       val startDate = endDate.minusWeeks(weekPeriod - 1).truncatedTo(ChronoUnit.DAYS)
       val bugtrackerUri = reportParams(ReportParams.BugtrackerUri).asInstanceOf[String]
-      val reportType = reportParams(ReportParams.ReportType).asInstanceOf[String]
 
       val marks = Metrics.marks(endDate, weekPeriod)
       val actualBugs = bugs.filter(bugsForPeriod(_, startDate))

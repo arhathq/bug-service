@@ -4,12 +4,12 @@ import java.io.ByteArrayInputStream
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.{BugApp, EmailConfig}
 import bugapp.mail.MailerActor.SendMail
 import bugapp.mail.{Attachment, MailMessage}
 import bugapp.report.ReportActor.{GetReport, ReportResult}
+import bugapp.report.ReportTypes.WeeklyReport
 
 /**
   *
@@ -22,7 +22,7 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
       val endDate = BugApp.toDate
       val startDate = BugApp.fromDate(endDate, weeks)
 
-      val request = GetReport("weekly", startDate, endDate, weeks)
+      val request = GetReport(WeeklyReport, startDate, endDate, weeks)
 
       reportActor ! request
       sender ! Ack(request.reportId)

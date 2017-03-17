@@ -1,6 +1,7 @@
 package bugapp.report
 
 import akka.actor.{ActorContext, ActorRef}
+import bugapp.report.ReportTypes.{ReportType, SlaReport, WeeklyReport}
 import bugapp.repository.FileEmployeeRepository
 
 /**
@@ -19,7 +20,7 @@ object WorkersFactory {
 }
 
 trait Workers {
-  def create(reportType: String): Set[ActorRef]
+  def create(reportType: ReportType): Set[ActorRef]
 }
 
 class ReportWorkers(context: ActorContext) extends Workers {
@@ -28,8 +29,8 @@ class ReportWorkers(context: ActorContext) extends Workers {
 
   private val employeeRepository = new FileEmployeeRepository
 
-  override def create(reportType: String): Set[ActorRef] = reportType match {
-    case "weekly" => Set(
+  override def create(reportType: ReportType): Set[ActorRef] = reportType match {
+    case WeeklyReport => Set(
       context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
       context.actorOf(AllOpenBugsNumberByPriorityChartActor.props(self)),
       context.actorOf(OpenTopBugListActor.props(self)),
@@ -42,7 +43,7 @@ class ReportWorkers(context: ActorContext) extends Workers {
       context.actorOf(WeeklySummaryReportActor.props(self)),
       context.actorOf(WeeklySummaryChartActor.props(self))
     )
-    case "sla" => Set(
+    case SlaReport => Set(
       context.actorOf(SlaReportActor.props(self)),
       context.actorOf(BugsOutSlaActor.props(self))
     )
@@ -51,8 +52,8 @@ class ReportWorkers(context: ActorContext) extends Workers {
 }
 
 class OnlineReportWorkers(val context: ActorContext) extends Workers {
-  override def create(reportType: String): Set[ActorRef] = reportType match {
-    case "sla" => Set(
+  override def create(reportType: ReportType): Set[ActorRef] = reportType match {
+    case SlaReport => Set(
 
     )
     case _ => Set.empty[ActorRef]

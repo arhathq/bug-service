@@ -5,6 +5,7 @@ import java.time.OffsetDateTime
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
 import bugapp.report.ReportActor.{ReportData, ReportError}
+import bugapp.report.ReportTypes.ReportType
 import bugapp.report.ReportWorker.WorkFailed
 import bugapp.report.WorkersFactory.WorkersType
 import bugapp.report.model.{MapValue, ReportField, StringValue}
@@ -26,7 +27,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
 
   override def receive: Receive = {
     case GetReportData(reportId, reportParams, bugs) =>
-      val reportType: String = reportParams(ReportParams.ReportType).asInstanceOf[String]
+      val reportType: ReportType = reportParams(ReportParams.ReportType).asInstanceOf[ReportType]
       val workers = reportWorkers.create(reportType)
       jobs += reportId -> workers
       requests += reportId -> reportParams
@@ -64,7 +65,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
   }
 
   def buildReportData(reportId: String): ReportData = {
-    val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[String]
+    val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[ReportType]
     val excludedComponents = requests(reportId)(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
     data.get(reportId) match {

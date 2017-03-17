@@ -4,6 +4,8 @@ import java.time.OffsetDateTime
 import java.util
 import java.util.Properties
 
+import bugapp.report.ReportTypes.ReportType
+
 import collection.JavaConverters._
 import com.typesafe.config.{ConfigFactory, Config => TypesafeConfig}
 
@@ -81,7 +83,7 @@ trait ReportConfig extends Config {
   val reportDir = reportConfig.getString("reportDir")
   val reportTypes = getConfigMap(reportConfig.getConfig("types"))
 
-  val reportTemplate: (String) => String = (reportType) => reportTypes(reportType)("template").asInstanceOf[String]
+  val reportTemplate: (ReportType) => String = (reportType) => reportTypes(reportType.name)("template").asInstanceOf[String]
 
 }
 

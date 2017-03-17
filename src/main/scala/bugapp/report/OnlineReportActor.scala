@@ -3,11 +3,11 @@ package bugapp.report
 import java.time.OffsetDateTime
 import java.util.UUID
 
-import akka.actor.Actor.Receive
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
 import bugapp.report.ReportActor.{ReportData, ReportError, ReportResult}
 import bugapp.report.ReportDataBuilder.GetReportData
+import bugapp.report.ReportTypes.ReportType
 import bugapp.repository.BugRepository
 
 import scala.collection.mutable
@@ -73,7 +73,7 @@ object OnlineReportActor {
   def props(bugRepository: BugRepository, excludedComponents: Seq[String]) =
     Props(classOf[OnlineReportActor], bugRepository, excludedComponents)
 
-  case class GetOnlineReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
+  case class GetOnlineReport(reportType: ReportType, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
     val reportId: String = UUID.randomUUID().toString
   }
   case class OnlineReport(reportId: String, report: model.ReportData)

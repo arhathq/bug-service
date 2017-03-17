@@ -9,6 +9,7 @@ import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
 import bugapp.report.ReportDataBuilder.GetReportData
 import bugapp.report.ReportGenerator.GenerateReport
+import bugapp.report.ReportTypes.ReportType
 import bugapp.report.converter.XmlReportDataConverter
 import bugapp.repository.BugRepository
 
@@ -125,13 +126,13 @@ object ReportActor {
   def formatNumber(number: Int): String = if (number == 0) "" else number.toString
   def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
 
-  case class GetReport(reportType: String, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
+  case class GetReport(reportType: ReportType, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
     val reportId: String = UUID.randomUUID().toString
   }
   case class ReportResult(report: Option[Report], error: Option[ReportError] = None)
 
   sealed trait ReportEvent
-  case class ReportData(reportId: String, reportType: String, result: model.ReportData) extends ReportEvent
+  case class ReportData(reportId: String, reportType: ReportType, result: model.ReportData) extends ReportEvent
   case class ReportGenerated(report: Report) extends ReportEvent
   case class ReportError(reportId: String, message: String) extends ReportEvent
 
@@ -146,4 +147,24 @@ object ReportParams {
   val BugtrackerUri = "bugtrackerUri"
   val WeekPeriod = "weekPeriod"
   val ExcludedComponents = "excludedComponents"
+}
+
+object ReportTypes {
+  sealed trait ReportType {
+    def name: String
+  }
+  case object WeeklyReport extends ReportType {
+    override def name = "weekly"
+  }
+  case object SlaReport extends ReportType {
+    override def name = "sla"
+  }
+
+  def from(name: String): Either[String, ReportType] = name match {
+    case "weekly" => Right(WeeklyReport)
+    case "sla" => Right(SlaReport)
+    case _ => Left(s"Invalid report name. Available reports $reportNames")
+  }
+
+  def reportNames = List(WeeklyReport.name, SlaReport.name)
 }
