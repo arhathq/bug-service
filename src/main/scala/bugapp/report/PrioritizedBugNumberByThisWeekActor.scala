@@ -3,7 +3,7 @@ package bugapp.report
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
@@ -14,7 +14,7 @@ import bugapp.repository.Bug
 /**
   * @author Alexander Kuleshov
   */
-class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends Actor with ActorLogging {
+class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {

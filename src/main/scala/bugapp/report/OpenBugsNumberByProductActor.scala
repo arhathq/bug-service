@@ -1,6 +1,6 @@
 package bugapp.report
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.formatNumber
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
@@ -9,7 +9,7 @@ import bugapp.report.model.{ListValue, MapValue, ReportField, StringValue}
 /**
   * @author Alexander Kuleshov
   */
-class OpenBugsNumberByProductActor(owner: ActorRef) extends Actor with ActorLogging {
+class OpenBugsNumberByProductActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {

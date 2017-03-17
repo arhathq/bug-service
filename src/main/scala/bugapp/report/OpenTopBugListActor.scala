@@ -1,6 +1,6 @@
 package bugapp.report
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.ReportActor.dateTimeFormat
@@ -11,7 +11,7 @@ import bugapp.repository.Bug
 /**
   * @author Alexander Kuleshov
   */
-class OpenTopBugListActor (owner: ActorRef) extends Actor with ActorLogging {
+class OpenTopBugListActor (owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
 
   private implicit val execution = context.dispatcher
 

@@ -2,7 +2,7 @@ package bugapp.report
 
 import java.time.OffsetDateTime
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model.{MapValue, ReportField, StringValue}
@@ -12,7 +12,7 @@ import org.jfree.data.category.DefaultCategoryDataset
 /**
   *
   */
-class AllOpenBugsNumberByPriorityChartActor(owner: ActorRef) extends Actor with ActorLogging {
+class AllOpenBugsNumberByPriorityChartActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   override def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
 

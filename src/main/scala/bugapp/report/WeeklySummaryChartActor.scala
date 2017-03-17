@@ -3,7 +3,7 @@ package bugapp.report
 import java.time.{DayOfWeek, LocalDate, OffsetDateTime}
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model.{MapValue, ReportField, StringValue}
@@ -14,7 +14,7 @@ import org.jfree.data.category.DefaultCategoryDataset
 /**
   *
   */
-class WeeklySummaryChartActor(owner: ActorRef) extends Actor with ActorLogging {
+class WeeklySummaryChartActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   import WeeklySummaryChartActor._
 
   override def receive: Receive = {

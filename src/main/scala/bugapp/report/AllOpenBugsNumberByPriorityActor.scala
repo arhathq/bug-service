@@ -1,6 +1,6 @@
 package bugapp.report
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
@@ -11,7 +11,7 @@ import bugapp.repository.Bug
 /**
   * @author Alexander Kuleshov
   */
-class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends Actor with ActorLogging {
+class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   import AllOpenBugsNumberByPriorityActor._
 
   private implicit val execution = context.dispatcher

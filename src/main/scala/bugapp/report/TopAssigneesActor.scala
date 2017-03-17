@@ -1,6 +1,6 @@
 package bugapp.report
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
@@ -9,7 +9,7 @@ import bugapp.report.model._
 /**
   * @author Alexander Kuleshov
   */
-class TopAssigneesActor(owner: ActorRef) extends Actor with ActorLogging {
+class TopAssigneesActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {

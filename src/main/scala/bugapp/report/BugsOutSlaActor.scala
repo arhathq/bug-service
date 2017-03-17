@@ -3,7 +3,7 @@ package bugapp.report
 import java.time.OffsetDateTime
 import java.time.temporal.ChronoUnit
 
-import akka.actor.{Actor, ActorLogging, ActorRef, Props}
+import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.dateTimeFormat
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
@@ -15,7 +15,7 @@ import org.jfree.data.category.DefaultCategoryDataset
 /**
   *
   */
-class BugsOutSlaActor(owner: ActorRef) extends Actor with ActorLogging {
+class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
   import bugapp.report.SlaReportActor._
 
   override def receive: Receive = {

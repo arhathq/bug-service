@@ -1,8 +1,11 @@
 package bugapp.report
 
+import java.time.OffsetDateTime
+
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
-import bugapp.report.ReportActor.ReportData
+import bugapp.report.ReportActor.{ReportData, ReportError}
+import bugapp.report.ReportWorker.WorkFailed
 import bugapp.report.WorkersFactory.WorkersType
 import bugapp.report.model.{MapValue, ReportField, StringValue}
 import bugapp.repository.Bug
@@ -37,7 +40,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
       }
       jobs.get(reportId) match {
         case Some(workers) =>
-          sender ! PoisonPill
+          killWorker(sender)
           val busyWorkers = workers - sender
           if (busyWorkers.isEmpty) {
             val reportData = buildReportData(reportId)
@@ -46,6 +49,16 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
             reportActor ! reportData
           } else
             jobs += reportId -> busyWorkers
+        case None =>
+      }
+
+    case WorkFailed(reportId, message) =>
+      jobs remove reportId match {
+        case Some(workers) =>
+          workers.foreach(killWorker)
+          data -= reportId
+          requests -= reportId
+          reportActor ! ReportError(reportId, message)
         case None =>
       }
   }
@@ -59,23 +72,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
         val reportData = dataList.map(data => ReportField(data.name, data.fields))
         data -= reportId
 
-        val result =
-          model.ReportData("bug-reports",
-            MapValue(
-              Seq(
-                ReportField("report-header",
-                  MapValue(
-                    ReportField("date", StringValue(BugApp.toDate.toString))
-                  )
-                ),
-                ReportField("report-footer",
-                  MapValue(
-                    ReportField("note", StringValue(createNote(excludedComponents)))
-                  )
-                )
-              ) ++ reportData: _*
-            )
-          )
+        val result = report(BugApp.toDate, createNote(excludedComponents), reportData)
 
         ReportData(reportId, reportType, result)
     }
@@ -96,4 +93,25 @@ object ReportDataBuilder {
   case class ReportDataResponse[T](reportId: String, result: T)
 
   def props(reportActor: ActorRef, reportWorkersType: WorkersType) = Props(classOf[ReportDataBuilder], reportActor, reportWorkersType)
+
+  def report(date: OffsetDateTime, notes: String, reportData: List[ReportField]): model.ReportData = {
+    model.ReportData("bug-reports",
+      MapValue(
+        Seq(
+          ReportField("report-header",
+            MapValue(
+              ReportField("date", StringValue(date.toString))
+            )
+          ),
+          ReportField("report-footer",
+            MapValue(
+              ReportField("note", StringValue(notes))
+            )
+          )
+        ) ++ reportData: _*
+      )
+    )
+  }
+
+  def killWorker(worker: ActorRef): Unit = worker ! PoisonPill
 }

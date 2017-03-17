@@ -12,7 +12,7 @@ object WorkersFactory {
   case object Online extends WorkersType
   case object Report extends WorkersType
 
-  def createWorkers(id: WorkersType, context: ActorContext) = id match {
+  def createWorkers(id: WorkersType, context: ActorContext): Workers = id match {
     case Report => new ReportWorkers(context)
     case Online => new OnlineReportWorkers(context)
   }
@@ -52,6 +52,9 @@ class ReportWorkers(context: ActorContext) extends Workers {
 
 class OnlineReportWorkers(val context: ActorContext) extends Workers {
   override def create(reportType: String): Set[ActorRef] = reportType match {
+    case "sla" => Set(
+
+    )
     case _ => Set.empty[ActorRef]
   }
 }
