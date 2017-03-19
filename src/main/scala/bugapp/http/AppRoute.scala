@@ -84,7 +84,7 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
                   createOnlineRequest(reportType, msg.toInt)
                 }
           }.mapAsync(parallelism = 3)(identity).
-            via(createActorFlow()).
+            via(createActorFlow(reportType)).
             map {
               msg: model.ReportData =>
                 TextMessage.Strict(new JsonReportDataConverter().convert(msg).toString())
@@ -103,10 +103,10 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
     }
   }
 
-  private def createActorFlow(): Flow[GetOnlineReport, model.ReportData, Any] = {
+  private def createActorFlow(reportName: String): Flow[GetOnlineReport, model.ReportData, Any] = {
     val in = Sink.actorRef(onlineActor, CloseConversation)
     val out = Source.actorRef(5, OverflowStrategy.fail).mapMaterializedValue { actor =>
-      onlineActor ! JoinActor(actor)
+      onlineActor ! JoinActor(actor, reportName)
       actor
     }
     Flow.fromSinkAndSource(in, out)

@@ -52,9 +52,13 @@ class ReportWorkers(context: ActorContext) extends Workers {
 }
 
 class OnlineReportWorkers(val context: ActorContext) extends Workers {
+
+  private val self = context.self
+
   override def create(reportType: ReportType): Set[ActorRef] = reportType match {
     case SlaReport => Set(
-
+      context.actorOf(SlaReportActor.props(self)),
+      context.actorOf(BugsOutSlaActor.props(self))
     )
     case _ => Set.empty[ActorRef]
   }

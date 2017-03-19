@@ -21,7 +21,7 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
 
   private implicit val ec = context.dispatcher
 
-  private var participants: Set[ActorRef] = Set.empty[ActorRef]
+  private var participants: Map[String, Set[ActorRef]] = Map.empty[String, Set[ActorRef]]
   private val reportDataBuilders = mutable.Map.empty[String, ActorRef]
 
   override def receive: Receive = {
@@ -44,9 +44,9 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
           reportDataBuilder ! GetReportData(reportId, reportParams, bugs)
 
         case Failure(t) =>
-          participants.foreach { sender =>
-            log.debug("Send another result to " + sender)
-            sender ! ReportResult(report = None, error = Some(ReportError(reportId, t.getMessage)))
+          participants.values.foreach { senders =>
+            log.debug("Send another result to " + senders)
+            senders.foreach(sender => sender ! ReportResult(report = None, error = Some(ReportError(reportId, t.getMessage))))
           }
 
       }
@@ -55,14 +55,22 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
       reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
         reportDataBuilder ! PoisonPill
       }
-      participants.foreach { sender =>
-        log.debug("Send another result to " + sender)
-        sender ! result
+      participants get reportType.name match {
+        case Some(actors) =>
+          actors.foreach { sender =>
+            log.debug("Send another result to " + sender)
+            sender ! result
+          }
+
+        case None =>
       }
 
-    case JoinActor(ref) =>
+    case JoinActor(ref, reportName) =>
       log.debug("JoinActor " + ref)
-      participants += ref
+      participants get reportName match {
+        case Some(actors) => participants += (reportName -> (actors + ref))
+        case None => participants += (reportName -> Set(ref))
+      }
 
     case CloseConversation =>
       log.debug("CloseConversation")
@@ -78,7 +86,7 @@ object OnlineReportActor {
   }
   case class OnlineReport(reportId: String, report: model.ReportData)
 
-  case class JoinActor(ref: ActorRef)
+  case class JoinActor(ref: ActorRef, reportName: String)
   case object CloseConversation
 }
 
