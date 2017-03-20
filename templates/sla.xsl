@@ -18,6 +18,7 @@
                 <fo:flow flow-name="xsl-region-body">
                     <fo:block/>
                     <xsl:apply-templates select="out-sla-bugs"/>
+                    <xsl:apply-templates select="out-sla-bugs-chart"/>
                 </fo:flow>
             </fo:page-sequence>
 
@@ -27,7 +28,7 @@
                 <fo:flow flow-name="xsl-region-body">
                     <xsl:apply-templates select="sla/p1-sla"/>
                     <xsl:apply-templates select="sla/p2-sla"/>
-                    <xsl:apply-templates select="sla/sla-chart"/>
+                    <xsl:apply-templates select="sla-chart"/>
                     <fo:block id='end'/>
                 </fo:flow>
             </fo:page-sequence>
@@ -129,6 +130,9 @@
         <xsl:apply-templates select="table"/>
         <fo:block font-size="12pt" font-weight="bold" space-before="3em" space-after=".5em">Out of SLA list</fo:block>
         <xsl:apply-templates select="list"/>
+    </xsl:template>
+
+    <xsl:template match="out-sla-bugs-chart">
         <fo:block text-align="center">
             <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
         </fo:block>
@@ -303,7 +307,7 @@
         </fo:table-row>
     </xsl:template>
 
-    <xsl:template match="sla/sla-chart">
+    <xsl:template match="sla-chart">
         <fo:block space-before="3em" text-align="center">
             <fo:external-graphic src="url('data:{image/content-type};base64,{image/content-value}')" content-height="50%" scaling="uniform"/>
         </fo:block>

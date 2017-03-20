@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
-    <title>Websocket RxJS</title>
+    <title>ProdSupport Performance</title>
 </head>
 <body>
 <h1>Web socket RxJS</h1>
@@ -10,36 +10,23 @@
 <script src="scripts/Chart.bundle.js"></script>
 <script src="scripts/app.js"></script>
 
-<canvas id="myChart" width="400" height="400"></canvas>
+<canvas id="slaChart1" width="400" height="400"></canvas>
+
+<canvas id="slaChart2" width="400" height="400"></canvas>
+
+<canvas id="bugOutSlaChart" width="400" height="400"></canvas>
+
+<canvas id="weeklySummaryChart" width="400" height="400"></canvas>
 
 <script>
-    var ctx = document.getElementById("myChart");
-    var myChart = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: ["Red", "Blue", "Yellow", "Green", "Purple", "Orange"],
-            datasets: [{
-                label: '# of Votes',
-                data: [12, 19, 3, 5, 2, 3],
-                backgroundColor: [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)',
-                    'rgba(153, 102, 255, 0.2)',
-                    'rgba(255, 159, 64, 0.2)'
-                ],
-                borderColor: [
-                    'rgba(255,99,132,1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)',
-                    'rgba(153, 102, 255, 1)',
-                    'rgba(255, 159, 64, 1)'
-                ],
-                borderWidth: 1
-            }]
-        },
+    var slaCtx1 = document.getElementById("slaChart1");
+    var slaChartData1 = {
+        labels: [],
+        datasets: []
+    };
+    var slaChart1 = new Chart(slaCtx1, {
+        type: 'line',
+        data: slaChartData1,
         options: {
             scales: {
                 yAxes: [{
@@ -51,5 +38,71 @@
         }
     });
 </script>
+
+<script>
+    var slaCtx2 = document.getElementById("slaChart2");
+    var slaChartData2 = {
+        labels: [],
+        datasets: []
+    };
+    var slaChart2 = new Chart(slaCtx2, {
+        type: 'line',
+        data: slaChartData2,
+        options: {
+            scales: {
+                yAxes: [{
+                    ticks: {
+                        beginAtZero:true
+                    }
+                }]
+            }
+        }
+    });
+</script>
+
+<script>
+    var bugsOutSlaCtx = document.getElementById("bugOutSlaChart");
+    var bugsOutSlaData = {
+        labels: [],
+        datasets: []
+    };
+    var bugsOutSlaChart = new Chart(bugsOutSlaCtx, {
+        type: 'bar',
+        data: bugsOutSlaData,
+        options: {
+            datasetFill : true,
+            scales: {
+                xAxes: [{
+                    stacked: true
+                }],
+                yAxes: [{
+                    stacked: false
+                }]            }
+        }
+    });
+</script>
+
+<script>
+    var weeklySummaryCtx = document.getElementById("weeklySummaryChart");
+    var weeklySummaryData = {
+        labels: [],
+        datasets: []
+    };
+    var weeklySummaryChart = new Chart(weeklySummaryCtx, {
+        type: 'bar',
+        data: weeklySummaryData,
+        options: {
+            datasetFill : true,
+            scales: {
+                xAxes: [{
+                    stacked: true
+                }],
+                yAxes: [{
+                    stacked: false
+                }]            }
+        }
+    });
+</script>
+
 </body>
 </html>

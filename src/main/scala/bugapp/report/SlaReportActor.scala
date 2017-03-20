@@ -42,11 +42,6 @@ class SlaReportActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogg
               MapValue(
                 sla(Metrics.P2Priority, marks, p2OutSla, actualBugs.filter(_.priority == Metrics.P2Priority))
               )
-            ),
-            ReportField("sla-chart",
-              MapValue(
-                slaAchievementTrendChart(marks, actualBugs)
-              )
             )
           )
         )

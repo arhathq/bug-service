@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
-import bugapp.report.model.{MapValue, ReportField, StringValue}
+import bugapp.report.model._
 import bugapp.repository.{Bug, BugHistory, HistoryItemChange}
 import org.jfree.data.category.DefaultCategoryDataset
 
@@ -14,7 +14,7 @@ import org.jfree.data.category.DefaultCategoryDataset
 /**
   *
   */
-class WeeklySummaryChartActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
+class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends ReportWorker(owner) with ActorLogging {
   import WeeklySummaryChartActor._
 
   override def receive: Receive = {
@@ -26,11 +26,17 @@ class WeeklySummaryChartActor(owner: ActorRef) extends ReportWorker(owner) with 
           (bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
       }
 
+      val chart =
+        if(renderChart)
+          weekSummaryChart(startDate, endDate, bugsForLastWeek)
+        else
+          weekSummaryData(startDate, endDate, bugsForLastWeek)
+
       val data =
         model.ReportData("week-summary-report-chart",
           MapValue(
             periodData(startDate, endDate),
-            weekSummaryChart(startDate, endDate, bugsForLastWeek)
+            chart
           )
         )
 
@@ -92,10 +98,56 @@ class WeeklySummaryChartActor(owner: ActorRef) extends ReportWorker(owner) with 
     )
   }
 
+  private def weekSummaryData(startDate: OffsetDateTime, endDate: OffsetDateTime, bugs: Seq[Bug]): ReportField = {
+    val marks = Metrics.daysRange(startDate, endDate)
+
+    val openData = weekSummaryChartData(Metrics.OpenStatus, marks, bugs, (b: Bug) => {
+      if (b.opened.isAfter(startDate))
+        Seq(BugEvent(b.id, b.opened.toLocalDate, "NEW", "newBug"))
+      else Seq()
+    })
+    val fixedData = weekSummaryChartData(Metrics.FixedStatus, marks, bugs, (_: Bug) => Seq())
+
+
+    ReportField("datasets",
+      MapValue(
+        ReportField("labels",
+          ListValue(
+            marks.map(mark => StringValue(mark.toLocalDate.toString)): _*
+          )
+        ),
+        ReportField("dataset",
+          ListValue(
+            weekSummaryDataSet(Metrics.OpenStatus, marks, openData),
+            weekSummaryDataSet(Metrics.FixedStatus, marks, fixedData)
+          )
+        )
+      )
+    )
+
+  }
+
+  private def weekSummaryDataSet(status: String, marks: Seq[OffsetDateTime], data: Seq[(Int, String, String)]): ReportValue = {
+    MapValue(
+      ReportField("name", StringValue(status)),
+      ReportField("values",
+        ListValue(
+          data.indices.map { idx =>
+            MapValue(
+              ReportField("x", IntValue(idx)),
+              ReportField("y", IntValue(data(idx)._1))
+            )
+          }: _*
+        )
+      )
+    )
+
+  }
+
 }
 
 object WeeklySummaryChartActor {
-  def props(owner: ActorRef) = Props(classOf[WeeklySummaryChartActor], owner)
+  def props(owner: ActorRef, renderChart: Boolean = true) = Props(classOf[WeeklySummaryChartActor], owner, renderChart)
 
   def bugEvents(bug: Bug): Seq[BugEvent] = {
     bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.

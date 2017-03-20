@@ -9,7 +9,6 @@ import bugapp.report.ReportActor.dateTimeFormat
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
 import bugapp.repository.Bug
-import org.jfree.data.category.DefaultCategoryDataset
 
 
 /**
@@ -39,23 +38,6 @@ class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLog
     val p2 = bugs.getOrElse(Metrics.P2Priority, Seq())
     val p1p2 = p1 ++ p2
 
-    <out-sla-bugs>
-      <week-period>{marks.length}</week-period>
-      <table>
-        {outSlaTableData(Metrics.P1Priority, p1, bugtrackerUri)}
-        {outSlaTableData(Metrics.P2Priority, p2, bugtrackerUri)}
-        {outSlaTableData("Grand Total", p1p2, bugtrackerUri)}
-      </table>
-      <list>
-        {bugListData(p1, bugtrackerUri)}
-        {bugListData(p2, bugtrackerUri)}
-      </list>
-      <image>
-        <content-type>image/jpeg</content-type>
-        <content-value>{outSlaChart(marks, p1p2)}</content-value>
-      </image>
-    </out-sla-bugs>
-
     model.ReportData("out-sla-bugs",
       MapValue(
         ReportField("week-period", IntValue(marks.length)),
@@ -70,8 +52,7 @@ class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLog
           MapValue(
             bugListData(p1, bugtrackerUri) ++ bugListData(p2, bugtrackerUri) : _*
           )
-        ),
-        outSlaChart(marks, p1p2)
+        )
       )
     )
   }
@@ -118,31 +99,6 @@ class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLog
       )
     )
   }
-
-  def outSlaChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Int, String, String)] = {
-    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
-    marks.map { mark =>
-      grouped.get(mark) match {
-        case Some(v) => (v.length, priority, mark)
-        case None => (0, priority, mark)
-      }
-    }
-  }
-
-  def outSlaChart(marks:Seq[String], bugs: Seq[Bug]): ReportField = {
-    val dataSet = new DefaultCategoryDataset()
-    outSlaChartData(Metrics.P1Priority, marks, bugs.filter(_.priority == Metrics.P1Priority)).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
-    outSlaChartData(Metrics.P2Priority, marks, bugs.filter(_.priority == Metrics.P2Priority)).foreach { v => dataSet.addValue(v._1, v._2, v._3) }
-
-    ReportField("image",
-      MapValue(
-        ReportField("content-type", StringValue("image/jpeg")),
-        ReportField("content-value", StringValue(ChartGenerator.generateBase64OutSlaBugs(dataSet)))
-      )
-    )
-
-  }
-
 
 }
 

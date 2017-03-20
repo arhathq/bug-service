@@ -45,7 +45,9 @@ class ReportWorkers(context: ActorContext) extends Workers {
     )
     case SlaReport => Set(
       context.actorOf(SlaReportActor.props(self)),
-      context.actorOf(BugsOutSlaActor.props(self))
+      context.actorOf(SlaChartActor.props(self)),
+      context.actorOf(BugsOutSlaActor.props(self)),
+      context.actorOf(BugsOutSlaChartActor.props(self))
     )
     case _ => Set.empty[ActorRef]
   }
@@ -57,8 +59,9 @@ class OnlineReportWorkers(val context: ActorContext) extends Workers {
 
   override def create(reportType: ReportType): Set[ActorRef] = reportType match {
     case SlaReport => Set(
-      context.actorOf(SlaReportActor.props(self)),
-      context.actorOf(BugsOutSlaActor.props(self))
+      context.actorOf(SlaChartActor.props(self, renderChart = false)),
+      context.actorOf(BugsOutSlaChartActor.props(self, renderChart = false)),
+      context.actorOf(WeeklySummaryChartActor.props(self, renderChart = false))
     )
     case _ => Set.empty[ActorRef]
   }
