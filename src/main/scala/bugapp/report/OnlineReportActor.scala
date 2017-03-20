@@ -73,6 +73,7 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
       }
 
     case CloseConversation =>
+      participants --= participants.keys
       log.debug("CloseConversation")
   }
 }

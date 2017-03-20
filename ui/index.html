@@ -1,23 +1,71 @@
 <!DOCTYPE html>
 <head>
     <meta charset="utf-8">
-    <title>ProdSupport Performance</title>
+    <title>Production Support Performance</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <link rel="stylesheet" href="styles/bootstrap.css"/>
+    <!--<link rel="stylesheet" href="styles/bootstrap-theme.css"/>-->
 </head>
 <body>
-<h1>Web socket RxJS</h1>
+<div class="container">
+    <div class="page-header">
+        <h1>Production Support <small>Performance Monitoring</small></h1>
+        <!--<p><a href="#" target="_blank" class="btn btn-success">Weekly Report &raquo;</a></p>-->
+    </div>
+    <div class="row">
+        <div class="col-xs-12">
+            <p>Bugs in Queue: 111 (open total), 22 (open P1+P2), and 62 (resolved/verified/closed bugs updated since 13-Mar-2017)</p>
+        </div>
+    </div>
+    <!--<hr>-->
+    <div class="row">
+        <div class="col-xs-4">
+            <h3>P1, SLA % achievement trend</h3>
+            <p><canvas id="slaChart1" width="200" height="200"></canvas></p>
+            <!--<p><a href="#" target="_blank" class="btn btn-success">Details &raquo;</a></p>-->
+        </div>
+        <div class="col-xs-4">
+            <h3>P2, SLA % achievement trend</h3>
+            <p><canvas id="slaChart2" width="200" height="200"></canvas></p>
+            <!--<p><a href="#" target="_blank" class="btn btn-success">Details &raquo;</a></p>-->
+        </div>
+        <div class="col-xs-4">
+            <h3>Bugs out SLA, P1/P2 by Week</h3>
+            <p><canvas id="bugOutSlaChart" width="300" height="300"></canvas></p>
+            <!--<p><a href="#" target="_blank" class="btn btn-success">Details &raquo;</a></p>-->
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-xs-1">
+            <p></p>
+        </div>
+        <div class="col-xs-10">
+            <h3>New bugs vs Resolved</h3>
+            <p><canvas id="weeklySummaryChart" width="300" height="150"></canvas></p>
+        </div>
+        <div class="col-xs-1">
+            <p></p>
+        </div>
+    </div>
+    <hr>
+    <div class="row">
+        <div class="col-xs-12">
+            <footer>
+                <!--<p>2017</p>-->
+            </footer>
+        </div>
+    </div>
+</div>
+
 <script src="scripts/rx.js"></script>
 <script src="scripts/rx.dom.js"></script>
 <script src="scripts/Chart.bundle.js"></script>
 <script src="scripts/app.js"></script>
-
-<canvas id="slaChart1" width="400" height="400"></canvas>
-
-<canvas id="slaChart2" width="400" height="400"></canvas>
-
-<canvas id="bugOutSlaChart" width="400" height="400"></canvas>
-
-<canvas id="weeklySummaryChart" width="400" height="400"></canvas>
-
+<script src="scripts/bootstrap.js"></script>
 <script>
     var slaCtx1 = document.getElementById("slaChart1");
     var slaChartData1 = {
@@ -38,7 +86,6 @@
         }
     });
 </script>
-
 <script>
     var slaCtx2 = document.getElementById("slaChart2");
     var slaChartData2 = {
@@ -59,7 +106,6 @@
         }
     });
 </script>
-
 <script>
     var bugsOutSlaCtx = document.getElementById("bugOutSlaChart");
     var bugsOutSlaData = {
@@ -81,7 +127,6 @@
         }
     });
 </script>
-
 <script>
     var weeklySummaryCtx = document.getElementById("weeklySummaryChart");
     var weeklySummaryData = {
@@ -103,6 +148,5 @@
         }
     });
 </script>
-
 </body>
 </html>
