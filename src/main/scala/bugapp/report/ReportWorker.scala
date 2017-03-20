@@ -12,9 +12,12 @@ abstract class ReportWorker (owner: ActorRef) extends Actor {
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     super.preRestart(reason, message)
 
-    message.getOrElse(None) match {
-      case ReportDataRequest(reportId, _, _) =>
-        owner ! WorkFailed(reportId, reason.getMessage)
+    message match {
+      case Some(msg) => msg match {
+        case ReportDataRequest(reportId, _, _) =>
+          owner ! WorkFailed(reportId, reason.getMessage)
+      }
+      case None =>
     }
   }
 }

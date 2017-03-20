@@ -64,6 +64,19 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
       }
   }
 
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    message match {
+      case Some(msg) => msg match {
+        case GetReportData(reportId, _, _) =>
+          jobs -= reportId
+          requests -= reportId
+          reportActor ! ReportError(reportId, reason.getMessage)
+      }
+
+      case None =>
+    }
+  }
+
   def buildReportData(reportId: String): ReportData = {
     val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[ReportType]
     val excludedComponents = requests(reportId)(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
