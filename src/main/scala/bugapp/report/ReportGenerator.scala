@@ -22,18 +22,19 @@ class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef)
 
   override def receive: Receive = {
     case GenerateReport(reportId, reportTemplate, reportData) =>
-      val tryOutput = Try(reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate)))
+      val output = reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate))
+      val reportName = report(reportDir, reportTemplate)
+      UtilsIO.write(reportName, output)
+      log.debug(s"Report $reportName created")
+      reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
+  }
 
-      tryOutput match {
-        case Success(output) =>
-          val reportName = report(reportDir, reportTemplate)
-          UtilsIO.write(reportName, output)
-          log.debug(s"Report $reportName created")
-          reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
+  override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
+    message.get match {
+      case GenerateReport(reportId, _, _) =>
+        reportActor ! ReportError(reportId, reason.getMessage)
+    }
 
-        case Failure(e) =>
-          reportActor ! ReportError(reportId, e.getMessage)
-      }
   }
 }
 
