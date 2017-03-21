@@ -2,6 +2,7 @@ package bugapp.report
 
 import java.io.ByteArrayInputStream
 import java.time.OffsetDateTime
+import java.time.format.DateTimeFormatter
 import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
@@ -34,7 +35,7 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
       val attachment = new Attachment("WeeklyReport.pdf", report.contentType, is)
 
       val mailId = UUID.randomUUID().toString
-      val subject = s"ProdSupport Weekly Report - ${OffsetDateTime.now.formatted("yyyy-MM-dd")}"
+      val subject = s"ProdSupport Weekly Report - ${OffsetDateTime.now.format(DateTimeFormatter.ISO_DATE)}"
       val text =
         """Hi All,
           |

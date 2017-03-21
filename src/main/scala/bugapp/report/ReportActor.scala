@@ -1,6 +1,6 @@
 package bugapp.report
 
-import java.time.OffsetDateTime
+import java.time.{LocalDate, OffsetDateTime}
 import java.time.format.DateTimeFormatter
 import java.util.UUID
 
@@ -95,7 +95,8 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
         reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
           reportDataBuilder ! PoisonPill
         }
-        reportBuilder ! GenerateReport(reportId, template, reportDataConverter.convert(result))
+        val reportName = report(reportDir, reportType)
+        reportBuilder ! GenerateReport(reportId, reportName, template, reportDataConverter.convert(result))
       } catch {
         case t: Throwable => self ! ReportError(reportId, t.getMessage)
       }
@@ -119,12 +120,16 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
 object ReportActor {
   private[report] val dateTimeFormat = DateTimeFormatter.ISO_ZONED_DATE_TIME
   private[report] val dateFormat = DateTimeFormatter.ISO_LOCAL_DATE
+  private val reportDateFormat = DateTimeFormatter.ofPattern("uuuuMMdd")
 
   def props(bugRepository: BugRepository, repositoryEventBus: RepositoryEventBus, excludedComponents: Seq[String]) =
     Props(classOf[ReportActor], bugRepository, repositoryEventBus, excludedComponents)
 
   def formatNumber(number: Int): String = if (number == 0) "" else number.toString
   def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
+
+  def report(dir: String, reportType: ReportType): String =
+    s"$dir/${reportType.name}${reportDateFormat.format(LocalDate.now)}.pdf"
 
   case class GetReport(reportType: ReportType, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
     val reportId: String = UUID.randomUUID().toString

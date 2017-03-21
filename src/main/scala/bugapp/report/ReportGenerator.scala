@@ -2,14 +2,11 @@ package bugapp.report
 
 import java.io._
 import java.net.URI
-import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.UtilsIO
 import bugapp.report.ReportActor.{Report, ReportError, ReportGenerated}
 
-import scala.util.{Failure, Success, Try}
 import scala.xml.{Elem, XML}
 
 /**
@@ -21,9 +18,8 @@ class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef)
   val reportGenerator: FopReportGenerator = new FopReportGenerator(new URI(fopConf))
 
   override def receive: Receive = {
-    case GenerateReport(reportId, reportTemplate, reportData) =>
+    case GenerateReport(reportId, reportName, reportTemplate, reportData) =>
       val output = reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate))
-      val reportName = report(reportDir, reportTemplate)
       UtilsIO.write(reportName, output)
       log.debug(s"Report $reportName created")
       reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
@@ -31,7 +27,7 @@ class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef)
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
     message.get match {
-      case GenerateReport(reportId, _, _) =>
+      case GenerateReport(reportId, _, _, _) =>
         reportActor ! ReportError(reportId, reason.getMessage)
     }
 
@@ -40,9 +36,7 @@ class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef)
 
 object ReportGenerator {
 
-  private val reportDateFormat = DateTimeFormatter.ofPattern("uuuuMMdd")
-
-  case class GenerateReport(reportId: String, reportTemplate: String, source: Elem)
+  case class GenerateReport(reportId: String, reportName: String, reportTemplate: String, source: Elem)
 
   def props(fopConf: String, reportDir: String, reportActor: ActorRef) =
     Props(classOf[ReportGenerator], fopConf, reportDir, reportActor)
@@ -59,6 +53,4 @@ object ReportGenerator {
 
   def contentType: String = "application/pdf"
 
-  def report(dir: String, template: String): String =
-    s"$dir/${template.split("\\.")(0)}${reportDateFormat.format(LocalDate.now)}.pdf"
 }
