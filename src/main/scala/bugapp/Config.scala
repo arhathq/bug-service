@@ -7,11 +7,15 @@ import java.util.Properties
 import bugapp.report.ReportTypes.ReportType
 
 import collection.JavaConverters._
-import com.typesafe.config.{ConfigFactory, Config => TypesafeConfig}
+import com.typesafe.config.{ConfigException, ConfigFactory, Config => TypesafeConfig}
+
+import scala.util.control.Exception.catching
 
 trait Config {
 
   private[bugapp] val config = ConfigFactory.load()
+
+  private[bugapp] val catchMissing = catching(classOf[ConfigException.Missing])
 
   /*
    * Parses following config into a Map
@@ -98,8 +102,13 @@ trait MailerConfig extends Config {
 
   private implicit val mailerConfig = config.getConfig("mailer")
 
-  val mailUsername: Option[String] = optionalValue("mail.username")
-  val mailPassword: Option[String] = optionalValue("mail.password")
+  val mailUsername: Option[String] = catchMissing opt {
+    Option(mailerConfig.getString("mail.username"))
+  } getOrElse None
+  val mailPassword: Option[String] = catchMissing opt {
+    Option(mailerConfig.getString("mail.password"))
+  } getOrElse None
+
   val mailProps = new Properties()
 
 }

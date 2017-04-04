@@ -21,6 +21,14 @@
           <xsl:apply-templates select="all-open-bugs"/>
           <xsl:apply-templates select="all-open-bugs-chart"/>
           <xsl:apply-templates select="open-bugs"/>
+        </fo:flow>
+      </fo:page-sequence>
+
+      <fo:page-sequence master-reference="simpleA4">
+        <xsl:apply-templates select="report-header"/>
+        <xsl:apply-templates select="report-footer"/>
+        <fo:flow flow-name="xsl-region-body">
+          <fo:block/>
           <xsl:apply-templates select="bugs-by-weeks-15"/>
         </fo:flow>
       </fo:page-sequence>

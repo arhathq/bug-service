@@ -12,6 +12,18 @@
         </encoder>
     </appender>
 
+    <appender name="SIFT" class="ch.qos.logback.classic.sift.SiftingAppender">
+        <discriminator class="bugapp.ActorBasedDiscriminator"/>
+        <sift>
+            <appender name="FILE-${reportActor}" class="ch.qos.logback.core.FileAppender">
+                <file>./logs/bug-service-${reportActor}.log</file>
+                <layout class="ch.qos.logback.classic.PatternLayout">
+                    <pattern>%d %-5level %logger{35} - %msg %n</pattern>
+                </layout>
+            </appender>
+        </sift>
+    </appender>
+
     <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
         <file>./logs/bug-service.log</file>
         <append>true</append>
@@ -20,7 +32,8 @@
         </filter>
         <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
             <!-- rollover daily -->
-            <fileNamePattern>./logs/bug-service-%d{yyyy-MM-dd}.%i..log</fileNamePattern>
+            <fileNamePattern>./logs/bug-service-%d{yyyy-MM-dd}.%i.log.gz</fileNamePattern>
+            <maxHistory>3</maxHistory>
             <timeBasedFileNamingAndTriggeringPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedFNATP">
                 <!-- or whenever the file size reaches 10MB -->
                 <maxFileSize>10MB</maxFileSize>
@@ -41,6 +54,7 @@
     <logger name="org.quartz" level="WARN"/>
 
     <root level="DEBUG">
+        <appender-ref ref="SIFT"/>
         <appender-ref ref="CONSOLE"/>
         <appender-ref ref="ASYNC"/>
     </root>
