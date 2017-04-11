@@ -14,7 +14,7 @@ class TopAssigneesActor(owner: ActorRef) extends ReportWorker(owner) with ActorL
 
   def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
-      val bugsByAssignee = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.assignee)
+      val bugsByAssignee = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus).groupBy(bug => bug.assignee)
 
       val topBugAssignees = bugsByAssignee.map(tuple => (tuple._1, tuple._2.length)).toSeq.sortWith(_._2 > _._2).take(15)
 

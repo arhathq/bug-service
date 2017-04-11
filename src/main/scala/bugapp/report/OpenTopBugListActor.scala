@@ -17,7 +17,7 @@ class OpenTopBugListActor (owner: ActorRef) extends ReportWorker(owner) with Act
 
   def receive: Receive = {
     case ReportDataRequest(reportId, _, bugs) =>
-      val prioritizedOpenBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.priority)
+      val prioritizedOpenBugs = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus).groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
 

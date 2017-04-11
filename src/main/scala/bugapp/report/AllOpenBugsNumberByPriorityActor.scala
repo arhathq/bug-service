@@ -20,7 +20,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends ReportWorker(own
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val excludedComponents: Seq[String] = reportParams(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
-      val openBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus)
+      val openBugs = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus)
       val prioritizedOpenBugs = openBugs.groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
@@ -65,7 +65,7 @@ object AllOpenBugsNumberByPriorityActor {
 
   def splitBugsByOpenPeriod(bugs: Seq[Bug]): Seq[(String, Seq[Bug])] = {
     bugs.groupBy { bug =>
-      val daysOpen = Metrics.durationInBusinessDays(bug.stats.openTime, bug.stats.resolvedTime)
+      val daysOpen = Metrics.durationInBusinessDays(bug.opened, bug.resolvedTime)
 
       var resolvedPeriod = "period6"
       if (daysOpen < 3) resolvedPeriod = "period1"

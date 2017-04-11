@@ -34,6 +34,7 @@ object Implicits {
 
   implicit val decoderBug: Decoder[Bug] = deriveDecoder[Bug]
   implicit val encoderBug: Encoder[Bug] = deriveEncoder[Bug]
+/*
   implicit val decoderBugStats: Decoder[BugStats] = deriveDecoder[BugStats]
   implicit val encoderBugStats: Encoder[BugStats] = deriveEncoder[BugStats]
   implicit val decoderBugHistory: Decoder[BugHistory] = deriveDecoder[BugHistory]
@@ -42,6 +43,77 @@ object Implicits {
   implicit val encoderBugHistoryItem: Encoder[HistoryItem] = deriveEncoder[HistoryItem]
   implicit val decoderBugHistoryItemChange: Decoder[HistoryItemChange] = deriveDecoder[HistoryItemChange]
   implicit val encoderBugHistoryItemChange: Encoder[HistoryItemChange] = deriveEncoder[HistoryItemChange]
+*/
+
+  implicit val encoderBugCreatedEvent: Encoder[BugCreatedEvent] = deriveEncoder[BugCreatedEvent]
+  implicit val decoderBugCreatedEvent: Decoder[BugCreatedEvent] = deriveDecoder[BugCreatedEvent]
+  implicit val encoderBugResolvedEvent: Encoder[BugResolvedEvent] = deriveEncoder[BugResolvedEvent]
+  implicit val decoderBugResolvedEvent: Decoder[BugResolvedEvent] = deriveDecoder[BugResolvedEvent]
+  implicit val encoderBugClosedEvent: Encoder[BugClosedEvent] = deriveEncoder[BugClosedEvent]
+  implicit val decoderBugClosedEvent: Decoder[BugClosedEvent] = deriveDecoder[BugClosedEvent]
+  implicit val encoderBugReopenedEvent: Encoder[BugReopenedEvent] = deriveEncoder[BugReopenedEvent]
+  implicit val decoderBugReopenedEvent: Decoder[BugReopenedEvent] = deriveDecoder[BugReopenedEvent]
+  implicit val encoderBugInProgressEvent: Encoder[BugInProgressEvent] = deriveEncoder[BugInProgressEvent]
+  implicit val decoderBugInProgressEvent: Decoder[BugInProgressEvent] = deriveDecoder[BugInProgressEvent]
+  implicit val encoderBugResolutionChangedEvent: Encoder[BugResolutionChangedEvent] = deriveEncoder[BugResolutionChangedEvent]
+  implicit val decoderBugResolutionChangedEvent: Decoder[BugResolutionChangedEvent] = deriveDecoder[BugResolutionChangedEvent]
+  implicit val encoderBugAssignedEvent: Encoder[BugAssignedEvent] = deriveEncoder[BugAssignedEvent]
+  implicit val decoderBugAssignedEvent: Decoder[BugAssignedEvent] = deriveDecoder[BugAssignedEvent]
+  implicit val encoderBugSubscriberAddedEvent: Encoder[BugSubscriberAddedEvent] = deriveEncoder[BugSubscriberAddedEvent]
+  implicit val decoderBugSubscriberAddedEvent: Decoder[BugSubscriberAddedEvent] = deriveDecoder[BugSubscriberAddedEvent]
+  implicit val encoderBugPriorityChangedEvent: Encoder[BugPriorityChangedEvent] = deriveEncoder[BugPriorityChangedEvent]
+  implicit val decoderBugPriorityChangedEvent: Decoder[BugPriorityChangedEvent] = deriveDecoder[BugPriorityChangedEvent]
+  implicit val encoderBugEscalatedEvent: Encoder[BugEscalatedEvent] = deriveEncoder[BugEscalatedEvent]
+  implicit val decoderBugEscalatedEvent: Decoder[BugEscalatedEvent] = deriveDecoder[BugEscalatedEvent]
+  implicit val encoderBugBlockedEvent: Encoder[BugBlockedEvent] = deriveEncoder[BugBlockedEvent]
+  implicit val decoderBugBlockedEvent: Decoder[BugBlockedEvent] = deriveDecoder[BugBlockedEvent]
+  implicit val encoderBugVerifiedEvent: Encoder[BugVerifiedEvent] = deriveEncoder[BugVerifiedEvent]
+  implicit val decoderBugVerifiedEvent: Decoder[BugVerifiedEvent] = deriveDecoder[BugVerifiedEvent]
+  implicit val encoderBugSeverityChangedEvent: Encoder[BugSeverityChangedEvent] = deriveEncoder[BugSeverityChangedEvent]
+  implicit val decoderBugSeverityChangedEvent: Decoder[BugSeverityChangedEvent] = deriveDecoder[BugSeverityChangedEvent]
+  implicit val encoderBugComponentChangedEvent: Encoder[BugComponentChangedEvent] = deriveEncoder[BugComponentChangedEvent]
+  implicit val decoderBugComponentChangedEvent: Decoder[BugComponentChangedEvent] = deriveDecoder[BugComponentChangedEvent]
+  implicit val encoderBugMarkedAsProductionEvent: Encoder[BugMarkedAsProductionEvent] = deriveEncoder[BugMarkedAsProductionEvent]
+  implicit val decoderBugMarkedAsProductionEvent: Decoder[BugMarkedAsProductionEvent] = deriveDecoder[BugMarkedAsProductionEvent]
+  implicit val encoderBugCommentedEvent: Encoder[BugCommentedEvent] = deriveEncoder[BugCommentedEvent]
+  implicit val decoderBugCommentedEvent: Decoder[BugCommentedEvent] = deriveDecoder[BugCommentedEvent]
+
+  implicit val encoderBugEvent: Encoder[BugEvent] = Encoder.instance {
+    case e @ BugCreatedEvent(_, _, _, _) => e.asJson
+    case e @ BugResolvedEvent(_, _, _, _) => e.asJson
+    case e @ BugClosedEvent(_, _, _, _) => e.asJson
+    case e @ BugReopenedEvent(_, _, _, _) => e.asJson
+    case e @ BugInProgressEvent(_, _, _, _) => e.asJson
+    case e @ BugResolutionChangedEvent(_, _, _, _) => e.asJson
+    case e @ BugAssignedEvent(_, _, _, _, _) => e.asJson
+    case e @ BugSubscriberAddedEvent(_, _, _, _) => e.asJson
+    case e @ BugPriorityChangedEvent(_, _, _, _) => e.asJson
+    case e @ BugEscalatedEvent(_, _, _, _) => e.asJson
+    case e @ BugBlockedEvent(_, _, _, _) => e.asJson
+    case e @ BugVerifiedEvent(_, _, _, _) => e.asJson
+    case e @ BugSeverityChangedEvent(_, _, _, _) => e.asJson
+    case e @ BugComponentChangedEvent(_, _, _, _, _) => e.asJson
+    case e @ BugMarkedAsProductionEvent(_, _, _, _) => e.asJson
+    case e @ BugCommentedEvent(_, _, _, _,_) => e.asJson
+  }
+  implicit val decoderBugEvent: Decoder[BugEvent] = {
+    Decoder[BugCreatedEvent].map[BugEvent](identity).
+      or(Decoder[BugResolvedEvent].map[BugEvent](identity)).
+      or(Decoder[BugClosedEvent].map[BugEvent](identity)).
+      or(Decoder[BugReopenedEvent].map[BugEvent](identity)).
+      or(Decoder[BugInProgressEvent].map[BugEvent](identity)).
+      or(Decoder[BugResolutionChangedEvent].map[BugEvent](identity)).
+      or(Decoder[BugAssignedEvent].map[BugEvent](identity)).
+      or(Decoder[BugSubscriberAddedEvent].map[BugEvent](identity)).
+      or(Decoder[BugPriorityChangedEvent].map[BugEvent](identity)).
+      or(Decoder[BugEscalatedEvent].map[BugEvent](identity)).
+      or(Decoder[BugBlockedEvent].map[BugEvent](identity)).
+      or(Decoder[BugVerifiedEvent].map[BugEvent](identity)).
+      or(Decoder[BugSeverityChangedEvent].map[BugEvent](identity)).
+      or(Decoder[BugComponentChangedEvent].map[BugEvent](identity)).
+      or(Decoder[BugMarkedAsProductionEvent].map[BugEvent](identity)).
+      or(Decoder[BugCommentedEvent].map[BugEvent](identity))
+  }
 
   implicit val jsonPrinter: Printer = Printer(preserveOrder = true, dropNullKeys = true, indent = "")
 }

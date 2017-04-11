@@ -43,10 +43,10 @@ object SlaChartActor {
   def props(owner: ActorRef, renderChart: Boolean = true) = Props(classOf[SlaChartActor], owner, renderChart)
 
   def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Double, String, String)] = {
-    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
+    val grouped = bugs.groupBy(bug => bug.openMonth)
     marks.map { mark =>
       grouped.get(mark) match {
-        case Some(v) => (SlaReportActor.slaPercentage(v.count(_.stats.passSla), v.length), priority, mark)
+        case Some(v) => (SlaReportActor.slaPercentage(v.count(_.passSla), v.length), priority, mark)
         case None => (100.0, priority, mark)
       }
     }

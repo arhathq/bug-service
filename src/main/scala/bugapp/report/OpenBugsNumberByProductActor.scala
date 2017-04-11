@@ -14,7 +14,7 @@ class OpenBugsNumberByProductActor(owner: ActorRef) extends ReportWorker(owner) 
 
   def receive: Receive = {
     case ReportDataRequest(reportId, _, bugs) =>
-      val bugsByProduct = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus).groupBy(bug => bug.product)
+      val bugsByProduct = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus).groupBy(bug => bug.product)
 
       val bugCountByProductAndPriority = bugsByProduct.map {tuple =>
         val bugCountByPriority = tuple._2.groupBy(bug => bug.priority).map(tuple => (tuple._1, tuple._2.length))

@@ -2,14 +2,13 @@ package bugapp.bugzilla
 
 import java.nio.file.Paths
 import java.time.OffsetDateTime
-import java.time.temporal.IsoFields
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import akka.http.scaladsl.model.HttpMethods
 import akka.stream._
 import akka.stream.scaladsl.{FileIO, Flow, Keep, Sink, Source}
 import akka.util.ByteString
-import bugapp.{BugApp, BugzillaConfig, UtilsIO}
+import bugapp.{BugzillaConfig, UtilsIO}
 import bugapp.http.HttpClient
 import bugapp.Implicits._
 import bugapp.stream.CirceStreamSupport
@@ -223,11 +222,64 @@ object BugzillaActor {
 
   val priority: (String) => String = priority => if (priority == "not prioritized") "NP" else priority
 
+  val createBugEvents: (BugzillaBug, BugzillaHistory) => Seq[BugEvent] = (bug, bugHistory) => {
+    var events = Vector.empty[BugEvent]
+    events :+= BugCreatedEvent(events.length, bug.id, bug.creation_time, bug.creator)
+    bugHistory.history.foreach { historyItem =>
+      historyItem.changes.foreach {
+        case BugzillaHistoryChange(_, "RESOLVED", "status") => events :+= BugResolvedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "CLOSED", "status") => events :+= BugClosedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "REOPENED", "status") => events :+= BugReopenedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "IN_PROGRESS", "status") => events :+= BugInProgressEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "BLOCKED", "status") => events :+= BugBlockedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "VERIFIED", "status") => events :+= BugVerifiedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "ASSIGNED", "status") => // ignore
+//        case BugzillaHistoryChange(_, "NEW", "status") => // ignore
+        case BugzillaHistoryChange(_, assignee, "assigned_to") => events :+= BugAssignedEvent(events.length, bug.id, historyItem.when, historyItem.who, assignee)
+        case BugzillaHistoryChange(_, severity, "severity") => events :+= BugSeverityChangedEvent(events.length, bug.id, historyItem.when, severity)
+        case BugzillaHistoryChange(_, resolution, "resolution") => events :+= BugResolutionChangedEvent(events.length, bug.id, historyItem.when, resolution)
+        case BugzillaHistoryChange(_, subscriber, "cc") => events :+= BugSubscriberAddedEvent(events.length, bug.id, historyItem.when, subscriber)
+        case BugzillaHistoryChange(_, newPriority, "priority") => events :+= BugPriorityChangedEvent(events.length, bug.id, historyItem.when, newPriority)
+        case BugzillaHistoryChange(_, "0. ESCALATED", "cf_customer_perspective") => events :+= BugEscalatedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "Production", "cf_production") => events :+= BugMarkedAsProductionEvent(events.length, bug.id, historyItem.when, historyItem.who)
+//        case BugzillaHistoryChange(_, _, "cf_production") => // ignore production type ???
+        case BugzillaHistoryChange(from, to, "component") => events :+= BugComponentChangedEvent(events.length, bug.id, historyItem.when, from, to) // ignore component
+//        case BugzillaHistoryChange(_, _, "url") => // ignore url
+//        case BugzillaHistoryChange(_, _, "version") => // ignore version
+//        case BugzillaHistoryChange(_, _, "cf_versiononestate") => // ignore
+//        case BugzillaHistoryChange(_, _, "cf_project_team") => // ignore project team
+//        case BugzillaHistoryChange(_, _, "platform") => // ignore platform
+//        case BugzillaHistoryChange(_, _, "product") => // ignore product
+//        case BugzillaHistoryChange(_, _, "summary") => // ignore summary
+//        case BugzillaHistoryChange(_, _, "keywords") => // ignore keywords
+//        case BugzillaHistoryChange(_, _, "blocks") => // ignore blocks
+//        case BugzillaHistoryChange(_, _, "depends_on") => // ignore depends_on
+//        case BugzillaHistoryChange(_, _, "attachments.isobsolete") => // ignore obsolete attachments
+//        case BugzillaHistoryChange(_, _, "attachments.description") => // ignore description of attachment
+//        case BugzillaHistoryChange(_, _, "attachments.ispatch") => // ignore
+//        case BugzillaHistoryChange(_, _, "cf_target_milestone") => // ignore target milestone
+//        case BugzillaHistoryChange(_, _, "op_sys") => // ignore
+//        case BugzillaHistoryChange(_, _, "cf_v1_reference") => // ignore
+//        case BugzillaHistoryChange(_, _, "estimated_time") => // ignore
+//        case BugzillaHistoryChange(_, _, "work_time") => // ignore
+//        case BugzillaHistoryChange(_, _, "deadline") => // ignore
+//        case BugzillaHistoryChange(_, "HOT DEPLOY", "cf_target_milestone") => // ignore hot deploy
+//        case BugzillaHistoryChange(_, "EMERGENCY HOT DEPLOY", "cf_target_milestone") => // ignore emergency hot deploy
+//        case BugzillaHistoryChange(_, _, "cf_hotdeploy_approved") => // ignore hot deploy approval
+//        case BugzillaHistoryChange(_, _, "cf_databasestoupdate") => // ignore databases to update
+//        case BugzillaHistoryChange(_, _, "cf_customer_perspective") => // ignore
+//        case a: Any => println(s"Unmapped event $a")
+        case _ =>
+      }
+    }
+    events
+  }
+
   val createBug: (BugzillaBug, BugzillaHistory) => Bug = (bug, history) => {
     Bug(bug.id, bug.severity, priority(bug.priority), bug.status, bug.resolution,
       bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
       bug.product, bug.component, bug.cf_production.getOrElse(""), bug.summary, bug.platform,
-      Some(createHistory(history)), createBugStats(bug, history))
+      /*Some(createHistory(history)), createBugStats(bug, history), */createBugEvents(bug, history))
   }
 }
