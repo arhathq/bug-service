@@ -11,8 +11,6 @@ trait BugRepository {
   def getBugs: Future[Seq[Bug]]
 
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]]
-
-  def getBugHistory(bugId: List[Int]): Seq[BugHistory]
 }
 
 case class Bug(id: Int,
@@ -29,10 +27,6 @@ case class Bug(id: Int,
                environment: String,
                summary: String,
                hardware: String,
-/*
-               history: Option[BugHistory],
-               stats: BugStats,
-*/
                events: Seq[BugEvent]
               ) {
 
@@ -42,18 +36,15 @@ case class Bug(id: Int,
     case Metrics.InvalidStatus => resolvedTime.get
   }
 
-  def actualStatus: String = {
+  val actualStatus: String = {
     if (resolvedStatuses.contains(status)) {
-      if (resolvedResolutions.contains(resolution)) return InvalidStatus else return FixedStatus
-    }
-    OpenStatus
+      if (invalidResolutions.contains(resolution)) InvalidStatus else FixedStatus
+    } else OpenStatus
   }
 
-  def isNotResolved: Boolean = {
-    status != "RESOLVED" && status != "VERIFIED" && status != "CLOSED"
-  }
+  val isNotResolved: Boolean = resolvedStatuses.contains(status)
 
-  def resolvedTime: Option[OffsetDateTime] = actualStatus match {
+  val resolvedTime: Option[OffsetDateTime] = actualStatus match {
     case FixedStatus | InvalidStatus => events.flatMap {
       case e: BugResolvedEvent => Some(e)
       case _ => None
@@ -66,9 +57,9 @@ case class Bug(id: Int,
 
   def daysOpen: Int = durationInBusinessDays(opened, resolvedTime)
 
-  def reopenedCount: Int = events.count(event => event.isInstanceOf[BugReopenedEvent])
+  val reopenedCount: Int = events.count(event => event.isInstanceOf[BugReopenedEvent])
 
-  def resolvedPeriod: String = daysOpen match {
+  val resolvedPeriod: String = daysOpen match {
     case value if value < 3 => ResolvedIn2Days
     case value if value < 7 => ResolvedIn6Days
     case value if value < 31 => ResolvedIn30Days
@@ -77,7 +68,7 @@ case class Bug(id: Int,
     case _ => ResolvedInMoreThan365Days
   }
 
-  def passSla: Boolean = priority match {
+  val passSla: Boolean = priority match {
       case P1Priority if daysOpen < 3  => true
       case P2Priority if daysOpen < 7  => true
       case P3Priority if daysOpen < 31 => true
@@ -86,17 +77,6 @@ case class Bug(id: Int,
 
   val openMonth: String = weeksStrFormat.format(opened)
 }
-case class BugHistory(id: Int, alias: Option[String], items: Seq[HistoryItem])
-case class HistoryItem(when: OffsetDateTime, who: String, changes: Seq[HistoryItemChange])
-case class HistoryItemChange(removed: String, added: String, field: String)
-case class BugStats(status: String,
-                    openTime: OffsetDateTime,
-                    resolvedTime: Option[OffsetDateTime],
-                    daysOpen: Int,
-                    reopenCount: Int,
-                    resolvedPeriod: String,
-                    passSla: Boolean,
-                    openMonth: String)
 
 case class BugsError(message: String) extends Exception(message)
 

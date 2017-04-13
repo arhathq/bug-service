@@ -156,39 +156,4 @@ class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends Rep
 
 object WeeklySummaryChartActor {
   def props(owner: ActorRef, renderChart: Boolean = true) = Props(classOf[WeeklySummaryChartActor], owner, renderChart)
-/*
-  def bugEvents(bug: Bug): Seq[BugEvent] = {
-    bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.
-      flatMap(item => item.changes.
-        filter(
-          change =>
-            (change.field == "status" && (change.added == "RESOLVED" || change.added == "REOPENED")) ||
-              ((change.added == "Production" || change.removed == "Dataload Failed" ||
-                change.removed == "New Files Arrived" || change.removed == "Data Consistency")
-                && bug.isNotResolved)
-        ).
-        map {
-          case change @ HistoryItemChange(_, "RESOLVED", "status") => BugEvent(bug.id, item.when.toLocalDate, "RESOLVED", "resolved", change)
-          case change @ HistoryItemChange(_, "REOPENED", "status") => BugEvent(bug.id, item.when.toLocalDate, "REOPENED", "reopened", change)
-          case change @ HistoryItemChange(_, "Production", _) if bug.isNotResolved => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("Dataload Failed", _, _) if bug.isNotResolved => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("New Files Arrived", _, _) if bug.isNotResolved => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("Data Consistency", _, _) if bug.isNotResolved => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-        }
-      )
-  }
-
-  case class BugEvent(bugId: Int, eventDate: LocalDate, bugStatus: String, event: String, source: Option[HistoryItemChange] = None) {
-    def status(): String = event match {
-      case "newBug" => Metrics.OpenStatus
-      case "resolved" => Metrics.FixedStatus
-      case "reopened" => Metrics.OpenStatus
-      case "movedToQueue" => Metrics.OpenStatus
-    }
-  }
-  object BugEvent {
-    def apply(bugId: Int, eventDate: LocalDate, status: String, event: String, source: HistoryItemChange): BugEvent =
-      BugEvent(bugId, eventDate, status, event, Some(source))
-  }
-*/
 }

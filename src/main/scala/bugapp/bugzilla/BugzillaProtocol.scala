@@ -111,11 +111,11 @@ object Metrics {
   val ResolvedInMoreThan365Days = " > 1 year"
 
   val resolvedStatuses = List("RESOLVED", "VERIFIED", "CLOSED")
-  val resolvedResolutions = List("INVALID", "WORKSFORME", "DUPLICATE", "WONTFIX")
+  val invalidResolutions = List("INVALID", "WORKSFORME", "DUPLICATE", "WONTFIX")
 
   def getStatus(status: String, resolution: String): String = {
     if (resolvedStatuses.contains(status)) {
-      if (resolvedResolutions.contains(resolution)) return InvalidStatus else return FixedStatus
+      if (invalidResolutions.contains(resolution)) return InvalidStatus else return FixedStatus
     }
     OpenStatus
   }

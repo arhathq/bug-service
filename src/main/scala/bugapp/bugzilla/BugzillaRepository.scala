@@ -13,7 +13,7 @@ import bugapp._
 import bugapp.Implicits._
 import bugapp.stream.CirceStreamSupport
 import bugapp.bugzilla.BugzillaActor.{DataReady, GetData}
-import bugapp.repository.{Bug, BugHistory, BugRepository}
+import bugapp.repository.{Bug, BugRepository}
 import com.typesafe.akka.extension.quartz.QuartzSchedulerExtension
 
 import scala.concurrent.{ExecutionContext, Future}
@@ -31,10 +31,6 @@ class BugzillaRepository(bugzillaActor: ActorRef)(implicit val s: ActorSystem, i
 
   def getBugs(fromDate: OffsetDateTime): Future[Seq[Bug]] = {
     getBugs(bug => bug.opened.isAfter(fromDate) && bug.environment == environment)
-  }
-
-  def getBugHistory(bugId: List[Int]): Seq[BugHistory] = {
-    bugId.map(BugHistory(_, None, Seq()))
   }
 
   private def getBugs(f: (Bug) => Boolean): Future[Seq[Bug]] = {

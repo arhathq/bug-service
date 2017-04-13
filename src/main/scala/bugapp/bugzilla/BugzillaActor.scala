@@ -187,39 +187,6 @@ object BugzillaActor {
   private def fileSink(filename: String): Sink[String, Future[IOResult]] =
     Flow[String].map(s => ByteString(s)).toMat(FileIO.toPath(Paths.get(filename)))(Keep.right)
 
-  val createItemChange: (BugzillaHistoryChange) => HistoryItemChange = item => {
-    HistoryItemChange(item.removed, item.added, item.field_name)
-  }
-
-  val createHistoryItem: (BugzillaHistoryItem) => HistoryItem = item => {
-    HistoryItem(item.when, item.who, item.changes.map(createItemChange))
-  }
-
-  val createHistory: (BugzillaHistory) => BugHistory = history => {
-    BugHistory(history.id, history.alias, history.history.map(createHistoryItem))
-  }
-
-  val createBugStats: (BugzillaBug, BugzillaHistory) => BugStats = (bug, bugHistory) => {
-    var openedTime = bug.creation_time
-    var resolvedTime: Option[OffsetDateTime] = None
-    var reopenedCount = 0
-    for (history <- bugHistory.history) {
-      for (change <- history.changes) {
-        if (change.field_name == "status" && change.added == "REOPENED") {
-          reopenedCount = reopenedCount + 1
-//          openedTime = history.when
-        }
-        if (change.field_name == "status" && change.added == "RESOLVED") {
-          resolvedTime = Some(history.when)
-        }
-      }
-    }
-    val (daysOpen, resolvedPeriod, passSla) = Metrics.age(bug.priority, openedTime, resolvedTime)
-    val weekStr = Metrics.weekFormat(bug.creation_time)
-    val status = Metrics.getStatus(bug.status, bug.resolution)
-    BugStats(status, openedTime, resolvedTime, daysOpen, reopenedCount, resolvedPeriod, passSla, weekStr)
-  }
-
   val priority: (String) => String = priority => if (priority == "not prioritized") "NP" else priority
 
   val createBugEvents: (BugzillaBug, BugzillaHistory) => Seq[BugEvent] = (bug, bugHistory) => {
@@ -280,6 +247,6 @@ object BugzillaActor {
       bug.creator, bug.creation_time, bug.assigned_to,
       bug.last_change_time.getOrElse(bug.creation_time),
       bug.product, bug.component, bug.cf_production.getOrElse(""), bug.summary, bug.platform,
-      /*Some(createHistory(history)), createBugStats(bug, history), */createBugEvents(bug, history))
+      createBugEvents(bug, history))
   }
 }
