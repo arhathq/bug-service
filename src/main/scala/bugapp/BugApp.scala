@@ -47,7 +47,7 @@ object BugApp extends App with AkkaConfig with HttpConfig with BugzillaConfig wi
 
   private val restService = new RestApiService(bugRepository, reportActor, onlineActor, reportSender)
 
-//  QuartzSchedulerExtension(system).schedule("reportSender", reportSender, SendWeeklyReport(15))
+  QuartzSchedulerExtension(system).schedule("reportSender", reportSender, SendWeeklyReport(15))
 
   log.debug("Starting App...")
 
