@@ -11,6 +11,9 @@ import com.typesafe.config.{ConfigException, ConfigFactory, Config => TypesafeCo
 
 import scala.util.control.Exception.catching
 
+/**
+  * Application configuration
+  */
 trait Config {
 
   private[bugapp] val config = ConfigFactory.load()

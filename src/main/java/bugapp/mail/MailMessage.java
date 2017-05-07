@@ -1,7 +1,7 @@
 package bugapp.mail;
 
 /**
- *
+ * Class that represents a mail message
  */
 public class MailMessage {
     private String id;
@@ -16,6 +16,9 @@ public class MailMessage {
     private String encoding;
     private Attachment[] attachments;
 
+    /**
+     * Constructor that creates mail message
+     */
     public MailMessage(String id, String from, String subject, String[] to, String[] cc, String[] bcc, String replyTo, String text, String htmlMessage, String encoding, Attachment[] attachments) {
         this.id = id;
         this.from = from;

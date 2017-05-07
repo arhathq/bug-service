@@ -8,6 +8,9 @@ import bugapp.repository.BugRepository
 
 import scala.concurrent.ExecutionContext
 
+/**
+  *
+  */
 class RestApiService(val bugRepository: BugRepository, val reportActor: ActorRef, val onlineActor: ActorRef, val reportSender: ActorRef)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext, implicit val materializer: ActorMaterializer) extends CorsSupport {
 
   private val appRoutes = new AppRoute(bugRepository, reportActor, onlineActor, reportSender)

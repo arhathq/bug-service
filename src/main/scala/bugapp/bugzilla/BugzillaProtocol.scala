@@ -6,6 +6,9 @@ import java.time.{DayOfWeek, Duration, OffsetDateTime}
 
 import bugapp.Implicits._
 
+/**
+  * Bugzilla Domain Model
+  */
 case class BugzillaBug(id: Int,
                        priority: String,
                        severity: String,

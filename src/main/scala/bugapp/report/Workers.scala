@@ -5,7 +5,7 @@ import bugapp.report.ReportTypes.{ReportType, SlaReport, WeeklyReport}
 import bugapp.repository.FileEmployeeRepository
 
 /**
-  * Created by arhathq on 20.12.2016.
+  * @author Alexander Kuleshov
   */
 
 object WorkersFactory {

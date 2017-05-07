@@ -8,7 +8,9 @@ import bugapp.MailerConfig
 
 import scala.util.{Failure, Success, Try}
 
-
+/**
+  *
+  */
 class MailerActor extends Actor with ActorLogging with MailerConfig {
   import MailerActor._
 

@@ -3,7 +3,6 @@ package bugapp.report;
 import org.apache.commons.codec.binary.Base64;
 import org.jfree.chart.ChartColor;
 import org.jfree.chart.ChartFactory;
-import org.jfree.chart.ChartUtilities;
 import org.jfree.chart.JFreeChart;
 import org.jfree.chart.axis.CategoryAxis;
 import org.jfree.chart.axis.NumberAxis;
@@ -14,28 +13,29 @@ import org.jfree.chart.labels.ItemLabelPosition;
 import org.jfree.chart.labels.StandardCategoryItemLabelGenerator;
 import org.jfree.chart.plot.CategoryPlot;
 import org.jfree.chart.plot.PlotOrientation;
-import org.jfree.chart.renderer.AreaRendererEndType;
 import org.jfree.chart.renderer.category.*;
 import org.jfree.chart.title.LegendTitle;
 import org.jfree.data.category.CategoryDataset;
-import org.jfree.data.category.DefaultCategoryDataset;
 import org.jfree.ui.RectangleEdge;
 import org.jfree.ui.RectangleInsets;
 import org.jfree.ui.TextAnchor;
 
 import java.awt.*;
 import java.awt.image.BufferedImage;
-import java.io.File;
 
 /**
+ * Class that contains different methods of chart generations
+ *
  * @author Alexander Kuleshov
  */
 public class ChartGenerator {
 
-    private static final String imageFormat = ImageFormat.JPEG;
+    private static final String IMAGE_FORMAT = ImageFormat.JPEG;
 
-
-    public static String generateBase64OutSlaBugs(CategoryDataset dataset) throws Exception {
+    /**
+     * Create base64 representation of chart for Bugs Out Sla
+     */
+    public static String generateBase64OutSlaBugs(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createBarChart(
                 "Production, Bugs out SLA, P1/P2 by Week",
                 "Week Year", "Bug Count",
@@ -68,7 +68,10 @@ public class ChartGenerator {
         return toBase64(chartToBytes(640, 480, chart));
     }
 
-    public static String generateBase64SlaAchievementTrend(CategoryDataset dataset) throws Exception {
+    /**
+     * Create base64 representation of chart for Sla Achievement Trend
+     */
+    public static String generateBase64SlaAchievementTrend(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createLineChart(
                 "P1/P2 SLA % achievement trend",  // title
                 "Year week",             // x-axis label
@@ -116,7 +119,10 @@ public class ChartGenerator {
             <2015-40>8</2015-40>
         </P2>
     */
-    public static String generateBase64OpenHighPriorityBugs(CategoryDataset dataset) throws Exception {
+    /**
+     * Create base64 representation of chart for Opened P1,P2 bugs
+     */
+    public static String generateBase64OpenHighPriorityBugs(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createStackedBarChart3D(
                 "Production, Open, P1/P2 by Week",
                 "", "Bug Count",
@@ -202,48 +208,10 @@ public class ChartGenerator {
             <2015-40></2015-40>
         </Invalid>
      */
-
-    public static byte[] generateBugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
-        JFreeChart chart = ChartFactory.createAreaChart(
-                "Prod Support Bugs - Last 15 Weeks",
-                "", "Bug Count",
-                dataset, PlotOrientation.VERTICAL,
-                true, true, false
-        );
-
-        LegendTitle legend = chart.getLegend();
-        legend.setPosition(RectangleEdge.RIGHT);
-
-        CategoryPlot plot = (CategoryPlot) chart.getPlot();
-        plot.setForegroundAlpha(0.8f);
-
-        plot.setNoDataMessage("No data to display");
-
-        final CategoryAxis domainAxis = plot.getDomainAxis();
-        domainAxis.setLowerMargin(0.0);
-        domainAxis.setUpperMargin(0.0);
-        domainAxis.setTickLabelsVisible(false);
-
-        // change the auto tick unit selection to integer units only...
-        final NumberAxis rangeAxis = (NumberAxis) plot.getRangeAxis();
-        rangeAxis.setStandardTickUnits(NumberAxis.createIntegerTickUnits());
-
-        AreaRenderer renderer = (AreaRenderer) plot.getRenderer();
-        renderer.setSeriesPaint(0, ChartColor.LIGHT_BLUE);
-        renderer.setSeriesPaint(1, ChartColor.LIGHT_RED);
-        renderer.setSeriesPaint(2, ChartColor.DARK_GRAY);
-        renderer.setEndType(AreaRendererEndType.TAPER);
-
-        renderer.setBaseItemLabelsVisible(true);
-
-        return chartToBytes(1024, 600, chart);
-    }
-
-    public static String generateBase64BugsFromLast15Weeks(CategoryDataset dataset) throws Exception {
-        return toBase64(generateBugsFromLast15Weeks(dataset));
-    }
-
-    public static byte[] generateBugsFromLast15Weeks1(CategoryDataset dataset) throws Exception {
+    /**
+     * Create chart for bugs during the last 15 weeks
+     */
+    public static byte[] generateBugsFromLast15Weeks1(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createStackedBarChart(
                 "Prod Support Bugs - Last 15 Weeks",
                 "", "Bug Count",
@@ -278,7 +246,10 @@ public class ChartGenerator {
         return chartToBytes(1024, 600, chart);
     }
 
-    public static String generateBase64BugsFromLast15Weeks1(CategoryDataset dataset) throws Exception {
+    /**
+     * Create base64 representation for chart with bugs during the last 15 weeks
+     */
+    public static String generateBase64BugsFromLast15Weeks1(CategoryDataset dataset) {
         return toBase64(generateBugsFromLast15Weeks1(dataset));
     }
 
@@ -294,7 +265,10 @@ public class ChartGenerator {
             <2015-06-03>4</2015-06-03>
         </Resolved>
      */
-    public static String generateBase64NewVsResolvedBugs(CategoryDataset dataset) throws Exception {
+    /**
+     * Create base64 representation for chart New Vs Resolved Bugs
+     */
+    public static String generateBase64NewVsResolvedBugs(CategoryDataset dataset) {
         JFreeChart chart = ChartFactory.createBarChart("", "", "", dataset, PlotOrientation.VERTICAL, true, true, false);
 
         CategoryPlot plot = (CategoryPlot) chart.getPlot();
@@ -323,54 +297,17 @@ public class ChartGenerator {
         return toBase64(chartToBytes(800, 600, chart));
     }
 
-    private void saveChart(int width, int height, String filename, JFreeChart chart) throws Exception {
-        File file = new File(filename);
-        ChartUtilities.saveChartAsJPEG(file, chart, width, height);
+    private static byte[] chartToBytes(int width, int height, JFreeChart chart) throws ReportGenerationException {
+        try {
+            BufferedImage image = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_RGB, null);
+            return EncoderUtil.encode(image, IMAGE_FORMAT);
+        } catch (Exception e) {
+            throw new ReportGenerationException("Conversion error", e);
+        }
     }
 
-    private static byte[] chartToBytes(int width, int height, JFreeChart chart) throws Exception {
-        BufferedImage image = chart.createBufferedImage(width, height, BufferedImage.TYPE_INT_RGB, null);
-        return EncoderUtil.encode(image, imageFormat);
-    }
-
-    private static String toBase64(byte[] bytes) throws Exception {
+    private static String toBase64(byte[] bytes) {
         return Base64.encodeBase64String(bytes);
     }
 
-    public static void main(String[] args)throws Exception {
-
-        ChartGenerator chartGenerator = new ChartGenerator();
-
-        String p1 = "P1";
-        String p2 = "P2";
-
-        String week1 = "2015-38";
-        String week2 = "2015-39";
-        String week3 = "2015-40";
-
-        DefaultCategoryDataset openHighPriorityBugs = new DefaultCategoryDataset();
-
-        openHighPriorityBugs.addValue(1.0, p1, week1);
-        openHighPriorityBugs.addValue(0.0, p1, week2);
-        openHighPriorityBugs.addValue(1.0, p1, week3);
-
-        openHighPriorityBugs.addValue(1.0, p2, week1);
-        openHighPriorityBugs.addValue(2.0, p2, week2);
-        openHighPriorityBugs.addValue(8.0, p2, week3);
-
-        System.out.println(generateBase64OpenHighPriorityBugs(openHighPriorityBugs));
-
-
-        String[] days = new String[] {"2015-06-01", "2015-06-02", "2015-06-03", "2015-06-04", "2015-06-05", "2015-06-06", "2015-06-07"};
-        int[] newBugs = new int[] {11, 13, 7, 24, 9, 17, 8};
-        int[] resolvedBugs = new int[] {7, 2, 5, 21, 5, 14, 7};
-
-        DefaultCategoryDataset newVsResolved = new DefaultCategoryDataset();
-        for(int i = 0; i < days.length; i++) {
-            newVsResolved.addValue(newBugs[i], "New", days[i]);
-            newVsResolved.addValue(resolvedBugs[i], "Resolved", days[i]);
-        }
-
-        System.out.println(chartGenerator.generateBase64NewVsResolvedBugs(newVsResolved));
-    }
 }

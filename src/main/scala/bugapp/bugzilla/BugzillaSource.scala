@@ -15,7 +15,7 @@ import bugapp.utils.DummySSLFactory
 import scala.util.{Failure, Success, Try}
 
 /**
-  * Created by arhathq on 21.01.2017.
+  * @author Alexander Kuleshov
   */
 class BugzillaSource(val startDate: Option[OffsetDateTime] = None, val limit: Int = 500, val offset: Int = 0)(implicit val s: ActorSystem) extends GraphStage[SourceShape[ByteString]] with BugzillaConfig {
   val out: Outlet[ByteString] = Outlet("BugzillaSource")

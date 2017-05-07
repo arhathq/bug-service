@@ -7,6 +7,10 @@ import bugapp.bugzilla.Metrics._
 
 import scala.concurrent.Future
 
+/**
+  * Domain model
+  */
+
 trait BugRepository {
   def getBugs: Future[Seq[Bug]]
 
@@ -45,9 +49,8 @@ case class Bug(id: Int,
   val isNotResolved: Boolean = resolvedStatuses.contains(status)
 
   val resolvedTime: Option[OffsetDateTime] = actualStatus match {
-    case FixedStatus | InvalidStatus => events.flatMap {
-      case e: BugResolvedEvent => Some(e)
-      case _ => None
+    case FixedStatus | InvalidStatus => events.filter { event =>
+      event.isInstanceOf[BugResolvedEvent]
     }.lastOption match {
       case Some(BugResolvedEvent(_, _, date, _)) => Some(date)
       case _ => None
@@ -55,7 +58,12 @@ case class Bug(id: Int,
     case _ => None
   }
 
-  def daysOpen: Int = durationInBusinessDays(opened, resolvedTime)
+  def daysOpen: Int = {
+    events.filter(event => event.isInstanceOf[BugReopenedEvent]).lastOption match {
+      case Some(event) => durationInBusinessDays(event.date, resolvedTime)
+      case _ => durationInBusinessDays(opened, resolvedTime)
+    }
+  }
 
   val reopenedCount: Int = events.count(event => event.isInstanceOf[BugReopenedEvent])
 

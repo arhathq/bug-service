@@ -1,7 +1,7 @@
 package bugapp.report.model
 
 /**
-  *
+  * Report data model
   */
 case class ReportData(name: String, fields: MapValue)
 

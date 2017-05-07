@@ -14,7 +14,7 @@ import scala.collection.mutable
 import scala.util.{Failure, Success}
 
 /**
-  * Created by arhathq on 16.01.2017.
+  * @author Alexander Kuleshov
   */
 class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[String]) extends Actor with ActorLogging {
   import OnlineReportActor._

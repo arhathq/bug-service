@@ -23,6 +23,9 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.language.postfixOps
 import scala.util.{Failure, Success, Try}
 
+/**
+  * Rest API routes
+  */
 class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val onlineActor: ActorRef, val reportSender: ActorRef)(implicit val system: ActorSystem, implicit val executionContext: ExecutionContext, implicit val materializer: ActorMaterializer) extends ResponseSupport {
 
   lazy val log: LoggingAdapter = Logging(system, getClass)

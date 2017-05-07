@@ -12,7 +12,7 @@ import bugapp.repository.Bug
 import org.jfree.data.category.DefaultCategoryDataset
 
 /**
-  * Created by Oleksandr_Kulieshov on 3/20/2017.
+  * @author Alexander Kuleshov
   */
 class BugsOutSlaChartActor(owner: ActorRef, renderChart: Boolean) extends ReportWorker(owner) with ActorLogging {
   import BugsOutSlaChartActor._

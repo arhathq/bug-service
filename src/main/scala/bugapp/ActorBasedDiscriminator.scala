@@ -7,7 +7,9 @@ import ch.qos.logback.core.sift.Discriminator
 import ch.qos.logback.core.spi.ContextAwareBase
 
 /**
-  * Created by arhathq on 28.03.2017.
+  * Logback discriminator implementation
+  *
+  * @author Alexander Kuleshov
   */
 class ActorBasedDiscriminator extends ContextAwareBase with Discriminator[LoggingEvent] {
   private val KEY = "reportActor"

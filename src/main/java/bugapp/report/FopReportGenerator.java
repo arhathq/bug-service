@@ -14,6 +14,8 @@ import java.io.*;
 import java.net.URI;
 
 /**
+ * Class that generates pdf document
+ *
  * @author Alexander Kuleshov
  */
 public class FopReportGenerator {
@@ -23,16 +25,22 @@ public class FopReportGenerator {
     private FopFactory fopFactory;
     private TransformerFactory transformerFactory;
 
+    /**
+     *
+     */
     public FopReportGenerator(URI configUri) {
         try {
             fopFactory = FopFactory.newInstance(configUri);
             transformerFactory = TransformerFactory.newInstance("net.sf.saxon.TransformerFactoryImpl", null);
         } catch (Exception e) {
-            throw new RuntimeException("Unable to create Fop generator", e);
+            throw new ReportGenerationException("Unable to create Fop generator", e);
         }
     }
 
-    public byte[] generate(InputStream data, InputStream template) throws Exception {
+    /**
+     * Method that generates pdf document
+     */
+    public byte[] generate(InputStream data, InputStream template) {
         try (ByteArrayOutputStream os = new ByteArrayOutputStream()) {
             Fop fop = fopFactory.newFop(outputFormat, os);
             Transformer transformer = transformerFactory.newTransformer(new StreamSource(template));
@@ -40,17 +48,9 @@ public class FopReportGenerator {
             Result res = new SAXResult(fop.getDefaultHandler());
             transformer.transform(src, res);
             return os.toByteArray();
+        } catch (Exception e) {
+            throw new ReportGenerationException("Report generation error", e);
         }
     }
 
-    public static void main(String[] args) throws Exception {
-        FopReportGenerator reportGenerator = new FopReportGenerator(new URI("fop1.xconf"));
-
-        InputStream data = FopReportGenerator.class.getClassLoader().getResourceAsStream("bug-report.xml");
-        InputStream template = FopReportGenerator.class.getClassLoader().getResourceAsStream("weekly.xsl");
-
-        byte[] output = reportGenerator.generate(data, template);
-        OutputStream os = new FileOutputStream("d:/report.pdf");
-        os.write(output);
-    }
 }

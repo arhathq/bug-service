@@ -14,7 +14,7 @@ import bugapp.repository.Bug
 import scala.collection.mutable
 
 /**
-  * Created by arhathq on 04.08.2016.
+  *
   */
 class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) extends Actor with ActorLogging {
   import ReportDataBuilder._
@@ -81,15 +81,14 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
     val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[ReportType]
     val excludedComponents = requests(reportId)(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
-    data.get(reportId) match {
-      case Some(dataList) =>
-        val reportData = dataList.map(data => ReportField(data.name, data.fields))
-        data -= reportId
+    val dataList = data(reportId)
 
-        val result = report(BugApp.toDate, createNote(excludedComponents), reportData)
+    val reportData = dataList.map(data => ReportField(data.name, data.fields))
+    data -= reportId
 
-        ReportData(reportId, reportType, result)
-    }
+    val result = report(BugApp.toDate, createNote(excludedComponents), reportData)
+
+    ReportData(reportId, reportType, result)
   }
 
   def createNote(excludedComponents: Seq[String]): String = {

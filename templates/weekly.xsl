@@ -605,7 +605,7 @@
           <fo:block>Moved To Queue: <fo:inline color="red"><xsl:value-of select="statistics/moved"/></fo:inline></fo:block>
           <fo:block>Bugs Resolved: <xsl:value-of select="statistics/resolved"/></fo:block>
           <fo:block>Total Bugs Updated: <xsl:value-of select="statistics/bugs-updated"/></fo:block>
-          <fo:block>Total Comments: <xsl:value-of select="statistics/total-comments"/></fo:block>
+          <!--<fo:block>Total Comments: <xsl:value-of select="statistics/total-comments"/></fo:block>-->
         </fo:list-item-body>
       </fo:list-item>
       <fo:list-item space-before="1.5em">

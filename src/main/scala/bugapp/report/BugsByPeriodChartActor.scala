@@ -39,13 +39,13 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends ReportWorker(o
         val closedBugsNumber = bugs.getOrElse(Metrics.FixedStatus, Seq()).length
         val invalidBugsNumber = bugs.getOrElse(Metrics.InvalidStatus, Seq()).length
         val openedBugsNumber = bugs.getOrElse(Metrics.OpenStatus, Seq()).length
-        log.debug("Week [{}] - Closed[{}], Invalid[{}], Opened[{}]", tuple._1, closedBugsNumber, invalidBugsNumber, openedBugsNumber)
-        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.FixedStatus)
-        traceInfo(bugs.getOrElse(Metrics.FixedStatus, Seq()))
-        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.InvalidStatus)
-        traceInfo(bugs.getOrElse(Metrics.InvalidStatus, Seq()))
-        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.OpenStatus)
-        traceInfo(bugs.getOrElse(Metrics.OpenStatus, Seq()))
+//        log.debug("Week [{}] - Closed[{}], Invalid[{}], Opened[{}]", tuple._1, closedBugsNumber, invalidBugsNumber, openedBugsNumber)
+//        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.FixedStatus)
+//        traceInfo(bugs.getOrElse(Metrics.FixedStatus, Seq()))
+//        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.InvalidStatus)
+//        traceInfo(bugs.getOrElse(Metrics.InvalidStatus, Seq()))
+//        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.OpenStatus)
+//        traceInfo(bugs.getOrElse(Metrics.OpenStatus, Seq()))
         (closedBugsNumber, invalidBugsNumber, openedBugsNumber)
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
       log.debug(s"Total bug number: $totalBugNumber")

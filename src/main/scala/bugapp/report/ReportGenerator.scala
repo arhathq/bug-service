@@ -10,7 +10,7 @@ import bugapp.report.ReportActor.{Report, ReportError, ReportGenerated}
 import scala.xml.{Elem, XML}
 
 /**
-  * Created by arhathq on 28.08.2016.
+  * @author Alexander Kuleshov
   */
 class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef) extends Actor with ActorLogging {
   import bugapp.report.ReportGenerator._

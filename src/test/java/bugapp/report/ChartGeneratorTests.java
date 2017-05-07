@@ -30,7 +30,7 @@ public class ChartGeneratorTests extends TestCase {
             bugsFromLast15Weeks.addValue(invalidBugs[i], invalid, weeks.get(i));
         }
 
-        byte[] chart = ChartGenerator.generateBugsFromLast15Weeks(bugsFromLast15Weeks);
+        byte[] chart = ChartGenerator.generateBugsFromLast15Weeks1(bugsFromLast15Weeks);
         FileOutputStream fos = new FileOutputStream("15LastWeeks.jpeg");
         fos.write(chart);
         fos.close();
