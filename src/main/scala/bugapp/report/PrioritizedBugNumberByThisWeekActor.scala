@@ -39,9 +39,9 @@ class PrioritizedBugNumberByThisWeekActor(owner: ActorRef) extends ReportWorker(
   }
 
   def priorityBugsNumData(priority: String, bugs: Seq[Bug]): MapValue = {
-    val closed = bugs.count(bug => bug.stats.status == Metrics.FixedStatus)
-    val invalid = bugs.count(bug => bug.stats.status == Metrics.InvalidStatus)
-    val opened = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
+    val closed = bugs.count(bug => bug.actualStatus == Metrics.FixedStatus)
+    val invalid = bugs.count(bug => bug.actualStatus == Metrics.InvalidStatus)
+    val opened = bugs.count(bug => bug.actualStatus == Metrics.OpenStatus)
 
     MapValue(
       ReportField("priority", StringValue(priority)),

@@ -20,7 +20,7 @@ class AllOpenBugsNumberByPriorityActor(owner: ActorRef) extends ReportWorker(own
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val excludedComponents: Seq[String] = reportParams(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
-      val openBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus)
+      val openBugs = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus)
       val prioritizedOpenBugs = openBugs.groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
@@ -65,15 +65,14 @@ object AllOpenBugsNumberByPriorityActor {
 
   def splitBugsByOpenPeriod(bugs: Seq[Bug]): Seq[(String, Seq[Bug])] = {
     bugs.groupBy { bug =>
-      val daysOpen = Metrics.durationInBusinessDays(bug.stats.openTime, bug.stats.resolvedTime)
-
-      var resolvedPeriod = "period6"
-      if (daysOpen < 3) resolvedPeriod = "period1"
-      else if (daysOpen < 7)  resolvedPeriod = "period2"
-      else if (daysOpen < 31) resolvedPeriod = "period3"
-      else if (daysOpen < 91) resolvedPeriod = "period4"
-      else if (daysOpen < 365) resolvedPeriod = "period5"
-      resolvedPeriod
+      bug.daysOpen match {
+        case daysOpen if daysOpen < 3 => "period1"
+        case daysOpen if daysOpen < 7 => "period2"
+        case daysOpen if daysOpen < 31 => "period3"
+        case daysOpen if daysOpen < 91 => "period4"
+        case daysOpen if daysOpen < 365 => "period5"
+        case _ => "period6"
+      }
     }.toSeq
   }
 }

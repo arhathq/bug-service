@@ -50,10 +50,10 @@ class SlaReportActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogg
   }
 
   def slaAchievementTrendChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Double, String, String)] = {
-    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
+    val grouped = bugs.groupBy(bug => bug.openMonth)
     marks.map { mark =>
       grouped.get(mark) match {
-        case Some(v) => (slaPercentage(v.count(_.stats.passSla), v.length), priority, mark)
+        case Some(v) => (slaPercentage(v.count(_.passSla), v.length), priority, mark)
         case None => (100.0, priority, mark)
       }
     }
@@ -73,8 +73,8 @@ class SlaReportActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogg
   }
 
   def sla(priority: String, marks:Seq[String], bugsOutSla: Seq[Bug], allBugs: Seq[Bug]): ReportField = {
-    val outSlaGrouped = bugsOutSla.groupBy(bug => bug.stats.openMonth)
-    val allGrouped = allBugs.groupBy(bug => bug.stats.openMonth)
+    val outSlaGrouped = bugsOutSla.groupBy(bug => bug.openMonth)
+    val allGrouped = allBugs.groupBy(bug => bug.openMonth)
     val res = marks.map(mark => outSlaGrouped.get(mark) match {
       case Some(v) =>
         weekPeriodElem(priority, mark, v.length, allGrouped.getOrElse(mark, Seq()).length)
@@ -106,13 +106,13 @@ object SlaReportActor {
   }
 
   val slaBugs: (Seq[Bug]) => Map[String, Seq[Bug]] = bugs => {
-    bugs.groupBy(bug => bug.stats.resolvedPeriod)
+    bugs.groupBy(bug => bug.resolvedPeriod)
   }
 
   val bugsOutSla: (Seq[Bug]) => Map[String, Seq[Bug]] = bugs => {
-    bugs.groupBy(bug => bug.stats match {
-      case stats if !stats.passSla && bug.priority == Metrics.P1Priority => Metrics.P1Priority
-      case stats if !stats.passSla && bug.priority == Metrics.P2Priority => Metrics.P2Priority
+    bugs.groupBy(bug => bug.priority match {
+      case Metrics.P1Priority if !bug.passSla => Metrics.P1Priority
+      case Metrics.P2Priority if !bug.passSla => Metrics.P2Priority
       case _ => "sla"
     })
   }

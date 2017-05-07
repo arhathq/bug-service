@@ -18,7 +18,7 @@ class AllOpenBugsNumberByPriorityChartActor(owner: ActorRef) extends ReportWorke
 
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
 
-      val openBugs = bugs.filter(bug => bug.stats.status == Metrics.OpenStatus)
+      val openBugs = bugs.filter(bug => bug.actualStatus == Metrics.OpenStatus)
       val prioritizedOpenBugs = openBugs.groupBy(bug => bug.priority)
       val p1OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P1Priority, Seq())
       val p2OpenBugs = prioritizedOpenBugs.getOrElse(Metrics.P2Priority, Seq())
@@ -29,7 +29,7 @@ class AllOpenBugsNumberByPriorityChartActor(owner: ActorRef) extends ReportWorke
   }
 
   def allOpenBugsChart(endDate: OffsetDateTime, bugs: Seq[Bug]): ReportField = {
-    val marks = bugs.groupBy(bug => bug.stats.openMonth).filter(tuple => tuple._2.nonEmpty).keys.toSeq.sortWith((v1, v2) => v1 < v2)
+    val marks = bugs.groupBy(bug => bug.openMonth).filter(tuple => tuple._2.nonEmpty).keys.toSeq.sortWith((v1, v2) => v1 < v2)
     val dataSet = new DefaultCategoryDataset()
     allOpenBugsChartData(Metrics.P1Priority, marks, bugs.filter(bug => bug.priority == Metrics.P1Priority)).foreach(data => dataSet.addValue(data._1, data._2, data._3))
     allOpenBugsChartData(Metrics.P2Priority, marks, bugs.filter(bug => bug.priority == Metrics.P2Priority)).foreach(data => dataSet.addValue(data._1, data._2, data._3))
@@ -43,7 +43,7 @@ class AllOpenBugsNumberByPriorityChartActor(owner: ActorRef) extends ReportWorke
   }
 
   def allOpenBugsChartData(priority: String, marks:Seq[String], bugs: Seq[Bug]): Seq[(Int, String, String)] = {
-    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
+    val grouped = bugs.groupBy(bug => bug.openMonth)
     marks.map { mark =>
       grouped.get(mark) match {
         case Some(v) => (v.length, priority, mark)

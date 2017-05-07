@@ -31,7 +31,7 @@ class ReportersBugNumberByPeriodActor(owner: ActorRef, repository: EmployeeRepos
       }.map { tuple =>
         val department = tuple._1
         val bugs = tuple._2
-        (department, bugs.groupBy(bug => bug.stats.status))
+        (department, bugs.groupBy(bug => bug.actualStatus))
       }
 
       val reporterBugsValue = departmentBugs.toSeq.

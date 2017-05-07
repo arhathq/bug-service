@@ -1,13 +1,13 @@
 package bugapp.report
 
-import java.time.{DayOfWeek, LocalDate, OffsetDateTime}
+import java.time.{DayOfWeek, OffsetDateTime}
 import java.time.temporal.ChronoUnit
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
-import bugapp.repository.{Bug, BugHistory, HistoryItemChange}
+import bugapp.repository._
 import org.jfree.data.category.DefaultCategoryDataset
 
 
@@ -15,14 +15,13 @@ import org.jfree.data.category.DefaultCategoryDataset
   *
   */
 class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends ReportWorker(owner) with ActorLogging {
-  import WeeklySummaryChartActor._
 
   override def receive: Receive = {
     case ReportDataRequest(reportId, reportParams, bugs) =>
       val endDate = reportParams(ReportParams.EndDate).asInstanceOf[OffsetDateTime]
       val startDate = endDate.minusDays(7).truncatedTo(ChronoUnit.DAYS)
       val bugsForLastWeek = bugs.filter { bug =>
-        (bug.stats.status == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)) ||
+        (bug.actualStatus == Metrics.OpenStatus && bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate)) ||
           (bug.changed.isAfter(startDate) && bug.changed.isBefore(endDate))
       }
 
@@ -43,14 +42,31 @@ class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends Rep
       owner ! ReportDataResponse(reportId, data)
   }
 
-  private def weekSummaryChartData(status: String, marks: Seq[OffsetDateTime], bugs: Seq[Bug], event: (Bug) => Seq[BugEvent]): Seq[(Int, String, String)] = {
-    val events = bugs.flatMap(bug => bugEvents(bug) ++ event(bug))
+  private def weekSummaryChartData(status: String, marks: Seq[OffsetDateTime], bugs: Seq[Bug]): Seq[(Int, String, String)] = {
+    val events = bugs.flatMap(bug => bug.events.filter {
+      case _: BugCreatedEvent => true
+      case _: BugResolvedEvent => true
+      case _: BugReopenedEvent => true
+      case _: BugMarkedAsProductionEvent if bug.isNotResolved => true
+      case BugComponentChangedEvent(_, _, _, "Dataload Failed", _) |
+           BugComponentChangedEvent(_, _, _, "New Files Arrived", _) |
+           BugComponentChangedEvent(_, _, _, "Data Consistency", _)
+        if bug.isNotResolved => true
+      case _ => false
+    })
 
-    val grouped = events.groupBy(event => event.eventDate)
+    val grouped = events.groupBy(event => event.date.toLocalDate)
     marks.map { mark =>
       grouped.get(mark.toLocalDate) match {
         case Some(v) =>
-          val events = v.filter(ev => ev.status == status)
+          val events = v.filter {
+            case _: BugCreatedEvent if status == Metrics.OpenStatus => true
+            case _: BugResolvedEvent if status == Metrics.FixedStatus => true
+            case _: BugReopenedEvent if status == Metrics.OpenStatus => true
+            case _: BugMarkedAsProductionEvent if status == Metrics.OpenStatus => true
+            case _: BugComponentChangedEvent if status == Metrics.OpenStatus => true
+            case _ => false
+          }
 //          log.debug(s"$mark")
 //          events.foreach(e => log.debug(s"$e"))
           (events.size, status, ReportActor.dateFormat.format(mark))
@@ -63,12 +79,8 @@ class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends Rep
     val marks = Metrics.daysRange(startDate, endDate)
 
     val dataSet = new DefaultCategoryDataset()
-    weekSummaryChartData(Metrics.OpenStatus, marks, bugs, (b: Bug) => {
-      if (b.opened.isAfter(startDate))
-        Seq(BugEvent(b.id, b.opened.toLocalDate, "NEW", "newBug"))
-      else Seq()
-    }).foreach(data => dataSet.addValue(data._1, data._2, data._3))
-    weekSummaryChartData(Metrics.FixedStatus, marks, bugs, (_: Bug) => Seq()).foreach(data => dataSet.addValue(data._1, data._2, data._3))
+    weekSummaryChartData(Metrics.OpenStatus, marks, bugs).foreach(data => dataSet.addValue(data._1, data._2, data._3))
+    weekSummaryChartData(Metrics.FixedStatus, marks, bugs).foreach(data => dataSet.addValue(data._1, data._2, data._3))
 
     ReportField("image",
       MapValue(
@@ -101,12 +113,8 @@ class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends Rep
   private def weekSummaryData(startDate: OffsetDateTime, endDate: OffsetDateTime, bugs: Seq[Bug]): ReportField = {
     val marks = Metrics.daysRange(startDate, endDate)
 
-    val openData = weekSummaryChartData(Metrics.OpenStatus, marks, bugs, (b: Bug) => {
-      if (b.opened.isAfter(startDate))
-        Seq(BugEvent(b.id, b.opened.toLocalDate, "NEW", "newBug"))
-      else Seq()
-    })
-    val fixedData = weekSummaryChartData(Metrics.FixedStatus, marks, bugs, (_: Bug) => Seq())
+    val openData = weekSummaryChartData(Metrics.OpenStatus, marks, bugs)
+    val fixedData = weekSummaryChartData(Metrics.FixedStatus, marks, bugs)
 
 
     ReportField("datasets",
@@ -148,42 +156,4 @@ class WeeklySummaryChartActor(owner: ActorRef, renderChart: Boolean) extends Rep
 
 object WeeklySummaryChartActor {
   def props(owner: ActorRef, renderChart: Boolean = true) = Props(classOf[WeeklySummaryChartActor], owner, renderChart)
-
-  def bugEvents(bug: Bug): Seq[BugEvent] = {
-    bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.
-      flatMap(item => item.changes.
-        filter(
-          change =>
-            (change.field == "status" && (change.added == "RESOLVED" || change.added == "REOPENED")) ||
-              ((change.added == "Production" || change.removed == "Dataload Failed" ||
-                change.removed == "New Files Arrived" || change.removed == "Data Consistency")
-                && isNotResolved(bug))
-        ).
-        map {
-          case change @ HistoryItemChange(_, "RESOLVED", "status") => BugEvent(bug.id, item.when.toLocalDate, "RESOLVED", "resolved", change)
-          case change @ HistoryItemChange(_, "REOPENED", "status") => BugEvent(bug.id, item.when.toLocalDate, "REOPENED", "reopened", change)
-          case change @ HistoryItemChange(_, "Production", _) if isNotResolved(bug) => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("Dataload Failed", _, _) if isNotResolved(bug) => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("New Files Arrived", _, _) if isNotResolved(bug) => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-          case change @ HistoryItemChange("Data Consistency", _, _) if isNotResolved(bug) => BugEvent(bug.id, item.when.toLocalDate, bug.status, "movedToQueue", change)
-        }
-      )
-  }
-
-  def isNotResolved(bug: Bug): Boolean = {
-    bug.status != "RESOLVED" && bug.status != "VERIFIED" && bug.status != "CLOSED"
-  }
-
-  case class BugEvent(bugId: Int, eventDate: LocalDate, bugStatus: String, event: String, source: Option[HistoryItemChange] = None) {
-    def status(): String = event match {
-      case "newBug" => Metrics.OpenStatus
-      case "resolved" => Metrics.FixedStatus
-      case "reopened" => Metrics.OpenStatus
-      case "movedToQueue" => Metrics.OpenStatus
-    }
-  }
-  object BugEvent {
-    def apply(bugId: Int, eventDate: LocalDate, status: String, event: String, source: HistoryItemChange): BugEvent =
-      BugEvent(bugId, eventDate, status, event, Some(source))
-  }
 }

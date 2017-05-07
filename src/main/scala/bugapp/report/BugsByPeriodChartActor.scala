@@ -31,7 +31,7 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends ReportWorker(o
       }. map { tuple =>
         val week = tuple._1
         val bugs = tuple._2
-        (week, bugs.groupBy(bug => bug.stats.status))
+        (week, bugs.groupBy(bug => bug.actualStatus))
       }
 
       val totalBugNumber = weeklyBugs.map { tuple =>
@@ -39,6 +39,13 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends ReportWorker(o
         val closedBugsNumber = bugs.getOrElse(Metrics.FixedStatus, Seq()).length
         val invalidBugsNumber = bugs.getOrElse(Metrics.InvalidStatus, Seq()).length
         val openedBugsNumber = bugs.getOrElse(Metrics.OpenStatus, Seq()).length
+        log.debug("Week [{}] - Closed[{}], Invalid[{}], Opened[{}]", tuple._1, closedBugsNumber, invalidBugsNumber, openedBugsNumber)
+        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.FixedStatus)
+        traceInfo(bugs.getOrElse(Metrics.FixedStatus, Seq()))
+        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.InvalidStatus)
+        traceInfo(bugs.getOrElse(Metrics.InvalidStatus, Seq()))
+        log.debug("----------- Week [{}] - {} -----------", tuple._1, Metrics.OpenStatus)
+        traceInfo(bugs.getOrElse(Metrics.OpenStatus, Seq()))
         (closedBugsNumber, invalidBugsNumber, openedBugsNumber)
       }.foldLeft((0, 0, 0))((acc, tuple) => (acc._1 + tuple._1, acc._2 + tuple._2, acc._3 + tuple._3))
       log.debug(s"Total bug number: $totalBugNumber")
@@ -54,6 +61,12 @@ class BugsByPeriodChartActor(owner: ActorRef, weeks: Int) extends ReportWorker(o
         )
 
       owner ! ReportDataResponse(reportId, data)
+  }
+
+  def traceInfo(bugs: Seq[Bug]): Unit = {
+    bugs.foreach { bug =>
+      log.debug(s"$Bug [${bug.id}] - ${bug.status}(${bug.resolution}) : [{} - {}]", bug.opened.toString, bug.actualDate.toString)
+    }
   }
 
   private def weeklyBugsData(marks: Seq[String], bugs: Map[String, Map[String, Seq[Bug]]]): ReportField = {

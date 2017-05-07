@@ -44,7 +44,7 @@ object BugsOutSlaChartActor {
   def props(owner: ActorRef, renderChart: Boolean = true) = Props(classOf[BugsOutSlaChartActor], owner, renderChart)
 
   def outSlaChartData(priority: String, marks: Seq[String], bugs: Seq[Bug]): Seq[(Int, String, String)] = {
-    val grouped = bugs.groupBy(bug => bug.stats.openMonth)
+    val grouped = bugs.groupBy(bug => bug.openMonth)
     marks.map { mark =>
       grouped.get(mark) match {
         case Some(v) => (v.length, priority, mark)

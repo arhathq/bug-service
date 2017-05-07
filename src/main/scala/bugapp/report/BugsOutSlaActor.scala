@@ -66,14 +66,14 @@ class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLog
           ReportField("opened", StringValue(dateTimeFormat.format(bug.opened))),
           ReportField("resolved",
             StringValue(
-              bug.stats.resolvedTime match {
+              bug.resolvedTime match {
                 case Some(time) => dateTimeFormat.format(time)
                 case None => ""
               }
             )
           ),
-          ReportField("daysOpen", IntValue(bug.stats.daysOpen)),
-          ReportField("reopenedCount", IntValue(bug.stats.reopenCount)),
+          ReportField("daysOpen", IntValue(bug.daysOpen)),
+          ReportField("reopenedCount", IntValue(bug.reopenedCount)),
           ReportField("summary", StringValue(bug.summary)),
           ReportField("link", StringValue(s"$bugtrackerUri/show_bug.cgi?id=${bug.id}"))
         )
@@ -82,7 +82,7 @@ class BugsOutSlaActor(owner: ActorRef) extends ReportWorker(owner) with ActorLog
   }
 
   def outSlaTableData(priority: String, bugs: Seq[Bug], bugtrackerUri: String): ReportField = {
-    val grouped = bugs.groupBy(_.stats.status)
+    val grouped = bugs.groupBy(_.actualStatus)
     val opened = grouped.getOrElse(Metrics.OpenStatus, Seq()).length
     val fixed = grouped.getOrElse(Metrics.FixedStatus, Seq()).length
     val invalid = grouped.getOrElse(Metrics.InvalidStatus, Seq()).length

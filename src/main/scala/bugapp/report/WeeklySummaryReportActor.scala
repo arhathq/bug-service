@@ -7,7 +7,7 @@ import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
-import bugapp.repository.{Bug, BugHistory}
+import bugapp.repository._
 
 /**
   * @author Alexander Kuleshov
@@ -57,12 +57,12 @@ class WeeklySummaryReportActor(owner: ActorRef) extends ReportWorker(owner) with
 
   private def bugCountData(bugs: Seq[Bug], totalBugs: Seq[Bug], weeks: Int, currentWeek: String): ReportField = {
 
-    val bugsGrouped = bugs.groupBy(bug => bug.stats.status)
+    val bugsGrouped = bugs.groupBy(bug => bug.actualStatus)
     val openedBugNumber = bugsGrouped.getOrElse(Metrics.OpenStatus, Seq()).size
     val closedBugNumber = bugsGrouped.getOrElse(Metrics.FixedStatus, Seq()).size
     val invalidBugNumber = bugsGrouped.getOrElse(Metrics.InvalidStatus, Seq()).size
 
-    val totalBugsGrouped = totalBugs.groupBy(bug => bug.stats.status)
+    val totalBugsGrouped = totalBugs.groupBy(bug => bug.actualStatus)
     val totalOpenedBugNumber = totalBugsGrouped.getOrElse(Metrics.OpenStatus, Seq()).size
     val totalClosedBugNumber = totalBugsGrouped.getOrElse(Metrics.FixedStatus, Seq()).size
     val totalInvalidBugNumber = totalBugsGrouped.getOrElse(Metrics.InvalidStatus, Seq()).size
@@ -94,11 +94,11 @@ class WeeklySummaryReportActor(owner: ActorRef) extends ReportWorker(owner) with
   }
 
   private def productionQueueData(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): ReportField = {
-    val queueBugsCount = bugs.count(bug => bug.stats.status == Metrics.OpenStatus)
+    val queueBugsCount = bugs.count(bug => bug.actualStatus == Metrics.OpenStatus)
     val highPriorityBugsCount = bugs.count { bug =>
-      bug.stats.status == Metrics.OpenStatus && (bug.priority == Metrics.P1Priority || bug.priority == Metrics.P2Priority)
+      bug.actualStatus == Metrics.OpenStatus && (bug.priority == Metrics.P1Priority || bug.priority == Metrics.P2Priority)
     }
-    val blockedBugsCount = bugs.count(bug => bug.status == "BLOCKED" && bug.stats.status == Metrics.OpenStatus)
+    val blockedBugsCount = bugs.count(bug => bug.status == "BLOCKED" && bug.actualStatus == Metrics.OpenStatus)
 
     ReportField("production-queue",
       MapValue(
@@ -113,29 +113,34 @@ class WeeklySummaryReportActor(owner: ActorRef) extends ReportWorker(owner) with
 
   private def weeklyStatisticsData(bugs: Seq[Bug], startDate: OffsetDateTime, endDate: OffsetDateTime): ReportField = {
     val newBugsCount = bugs.count(bug => bug.opened.isAfter(startDate) && bug.opened.isBefore(endDate))
-    val reopenedBugsCount = bugs.filter(bug => bug.stats.reopenCount > 0).foldLeft(0)((acc, bug) =>
-      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
-        acc + history.changes.count(change => change.field == "status" && change.added == "REOPENED" && history.when.isAfter(startDate))
-      )
+    val reopenedBugsCount = bugs.filter(bug => bug.reopenedCount > 0).foldLeft(0)((acc, bug) =>
+      acc + bug.events.count {
+        case BugReopenedEvent(_, _, when, _) if when.isAfter(startDate) => true
+        case _ => false
+      }
     )
-    val movedBugsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
-      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
-        acc + history.changes.count(change =>
-          history.when.isAfter(startDate) &&
-            (change.added == "Production" || change.removed == "Dataload Failed"  || change.removed == "New Files Arrived"  || change.removed == "Data Consistency") &&
-            (bug.status != "RESOLVED" && bug.status != "VERIFIED" && bug.status != "CLOSED")
-        )
-      )
+    val movedBugsCount = bugs.filter(bug => bug.changed.isAfter(startDate) && bug.isNotResolved).foldLeft(0)((acc, bug) =>
+
+      acc + bug.events.count {
+        case BugMarkedAsProductionEvent(_, _, when, _) if when.isAfter(startDate) => true
+        case BugComponentChangedEvent(_, _, when, "Dataload Failed", _) if when.isAfter(startDate) => true
+        case BugComponentChangedEvent(_, _, when, "New Files Arrived", _) if when.isAfter(startDate) => true
+        case BugComponentChangedEvent(_, _, when, "Data Consistency", _) if when.isAfter(startDate) => true
+        case _ => false
+      }
+
     )
     val resolvedBugsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
-      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.foldLeft(0)((acc, history) =>
-        acc + history.changes.count(change => change.field == "status" && change.added == "RESOLVED" && history.when.isAfter(startDate))
-      )
+      acc + bug.events.count {
+        case BugResolvedEvent(_, _, when, _) if when.isAfter(startDate) => true
+        case _ => false
+      }
     )
     val updatedBugsCount = bugs.count(bug => bug.changed.isAfter(startDate))
-    val totalBugCommentsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
-      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.count(item => item.when.isAfter(startDate))
-    )
+    val totalBugCommentsCount = 0
+//    val totalBugCommentsCount = bugs.filter(bug => bug.changed.isAfter(startDate)).foldLeft(0)((acc, bug) =>
+//      acc + bug.history.getOrElse(BugHistory(bug.id, None, Seq())).items.count(item => item.when.isAfter(startDate))
+//    )
 
     ReportField("statistics",
       MapValue(
