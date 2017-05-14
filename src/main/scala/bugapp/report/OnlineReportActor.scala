@@ -5,8 +5,8 @@ import java.util.UUID
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
-import bugapp.report.ReportActor.{ReportData, ReportError, ReportResult}
-import bugapp.report.ReportDataBuilder.GetReportData
+import bugapp.report.ReportActor.{ReportDataPrepared, ReportError, ReportResult}
+import bugapp.report.ReportDataBuilderActor.GetReportData
 import bugapp.report.ReportTypes.ReportType
 import bugapp.repository.BugRepository
 
@@ -31,7 +31,7 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
 
       bugsFuture.onComplete {
         case Success(bugs) =>
-          val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self, WorkersFactory.Online))
+          val reportDataBuilder = context.actorOf(ReportDataBuilderActor.props(self, WorkersFactory.Online))
           reportDataBuilders += (reportId -> reportDataBuilder)
           val reportParams = Map[String, Any](
                       ReportParams.ReportType -> reportType,
@@ -51,7 +51,7 @@ class OnlineReportActor(bugRepository: BugRepository, excludedComponents: Seq[St
 
       }
 
-    case ReportData(reportId, reportType, result) =>
+    case ReportDataPrepared(reportId, reportType, result) =>
       reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
         reportDataBuilder ! PoisonPill
       }

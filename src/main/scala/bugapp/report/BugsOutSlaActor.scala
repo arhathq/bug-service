@@ -6,7 +6,7 @@ import java.time.temporal.ChronoUnit
 import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
 import bugapp.report.ReportActor.dateTimeFormat
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilderActor.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.model._
 import bugapp.repository.Bug
 

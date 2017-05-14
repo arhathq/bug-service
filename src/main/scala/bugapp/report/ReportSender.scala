@@ -61,7 +61,6 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
     val is = new ByteArrayInputStream(report.data)
     val attachment = new Attachment("WeeklyReport.pdf", report.contentType, is)
 
-    val mailId = UUID.randomUUID().toString
     val subject = s"ProdSupport Weekly Report - ${OffsetDateTime.now.format(DateTimeFormatter.ISO_DATE)}"
     val text =
       """Hi All,
@@ -69,19 +68,8 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
         |Please find Production Support Weekly status report attached.
       """.stripMargin
 
-    val mailMessage = new MailMessage(
-      mailId,
-      from,
-      subject,
-      to("weekly"),
-      cc("weekly"),
-      Array(),
-      null,
-      text,
-      null,
-      "UTF-8",
-      Array(attachment)
-    )
+    val mailMessage = message(from, subject, to("weekly"), cc("weekly"), text, attachment)
+
     mailerActor ! SendMail(mailMessage)
   }
 
@@ -89,7 +77,6 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
     val is = new ByteArrayInputStream(report.data)
     val attachment = new Attachment("SlaReport.pdf", report.contentType, is)
 
-    val mailId = UUID.randomUUID().toString
     val subject = s"ProdSupport Sla Report - ${OffsetDateTime.now.format(DateTimeFormatter.ISO_DATE)}"
     val text =
       """Hi All,
@@ -97,25 +84,17 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
         |Please find Production Support SLA status report attached.
       """.stripMargin
 
-    val mailMessage = new MailMessage(
-      mailId,
-      from,
-      subject,
-      to("sla"),
-      cc("sla"),
-      Array(),
-      null,
-      text,
-      null,
-      "UTF-8",
-      Array(attachment)
-    )
+    val mailMessage = message(from, subject, to("sla"), cc("sla"), text, attachment)
+
     mailerActor ! SendMail(mailMessage)
   }
 }
 
 object ReportSender {
   def props(reportActor: ActorRef, mailerActor: ActorRef) = Props(classOf[ReportSender], reportActor, mailerActor)
+
+  def message(from: String, subject: String, to: Array[String], cc: Array[String], text: String, attachment: Attachment) =
+    new MailMessage(UUID.randomUUID().toString, from, subject, to, cc, Array(), null, text, null, "UTF-8", Array(attachment))
 
   case class SendWeeklyReport(weeks: Int)
   case class SendSlaReport(weeks: Int)

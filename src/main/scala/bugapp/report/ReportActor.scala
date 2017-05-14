@@ -7,7 +7,7 @@ import java.util.UUID
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.{BugApp, ReportConfig}
 import bugapp.bugzilla.RepositoryEventBus
-import bugapp.report.ReportDataBuilder.GetReportData
+import bugapp.report.ReportDataBuilderActor.GetReportData
 import bugapp.report.ReportGenerator.GenerateReport
 import bugapp.report.ReportTypes.ReportType
 import bugapp.report.converter.XmlReportDataConverter
@@ -43,7 +43,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
         val reportId = request.reportId
         senders += reportId -> sender
         bugRepository.getBugs.map { bugs =>
-          val reportDataBuilder = context.actorOf(ReportDataBuilder.props(self, WorkersFactory.Report))
+          val reportDataBuilder = context.actorOf(ReportDataBuilderActor.props(self, WorkersFactory.Report))
           reportDataBuilders += (reportId -> reportDataBuilder)
           val reportParams = Map[String, Any](
             ReportParams.ReportType -> reportType,
@@ -89,7 +89,7 @@ class ReportActor(bugRepository: BugRepository, repositoryEventBus: RepositoryEv
   }
 
   private def handleReportEvent(event: ReportEvent) = event match {
-    case ReportData(reportId, reportType, result) =>
+    case ReportDataPrepared(reportId, reportType, result) =>
       try {
         val template = reportTemplate(reportType)
         reportDataBuilders.remove(reportId).foreach { reportDataBuilder =>
@@ -137,7 +137,7 @@ object ReportActor {
   case class ReportResult(report: Option[Report], error: Option[ReportError] = None)
 
   sealed trait ReportEvent
-  case class ReportData(reportId: String, reportType: ReportType, result: model.ReportData) extends ReportEvent
+  case class ReportDataPrepared(reportId: String, reportType: ReportType, result: model.ReportData) extends ReportEvent
   case class ReportGenerated(report: Report) extends ReportEvent
   case class ReportError(reportId: String, message: String) extends ReportEvent
 

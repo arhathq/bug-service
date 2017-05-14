@@ -4,7 +4,7 @@ import java.time.OffsetDateTime
 
 import akka.actor.{Actor, ActorLogging, ActorRef, PoisonPill, Props}
 import bugapp.BugApp
-import bugapp.report.ReportActor.{ReportData, ReportError}
+import bugapp.report.ReportActor.{ReportDataPrepared, ReportError}
 import bugapp.report.ReportTypes.ReportType
 import bugapp.report.ReportWorker.WorkFailed
 import bugapp.report.WorkersFactory.WorkersType
@@ -16,8 +16,8 @@ import scala.collection.mutable
 /**
   *
   */
-class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) extends Actor with ActorLogging {
-  import ReportDataBuilder._
+class ReportDataBuilderActor(reportActor: ActorRef, reportWorkersType: WorkersType) extends Actor with ActorLogging {
+  import ReportDataBuilderActor._
 
   private val jobs = mutable.Map.empty[String, Set[ActorRef]]
   private val requests = mutable.Map.empty[String, Map[String, Any]]
@@ -77,7 +77,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
     }
   }
 
-  def buildReportData(reportId: String): ReportData = {
+  def buildReportData(reportId: String): ReportDataPrepared = {
     val reportType = requests(reportId)(ReportParams.ReportType).asInstanceOf[ReportType]
     val excludedComponents = requests(reportId)(ReportParams.ExcludedComponents).asInstanceOf[Seq[String]]
 
@@ -88,7 +88,7 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
 
     val result = report(BugApp.toDate, createNote(excludedComponents), reportData)
 
-    ReportData(reportId, reportType, result)
+    ReportDataPrepared(reportId, reportType, result)
   }
 
   def createNote(excludedComponents: Seq[String]): String = {
@@ -99,13 +99,13 @@ class ReportDataBuilder(reportActor: ActorRef, reportWorkersType: WorkersType) e
   }
 }
 
-object ReportDataBuilder {
+object ReportDataBuilderActor {
   case class GetReportData(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
 
   case class ReportDataRequest(reportId: String, reportParams: Map[String, Any], bugs: Seq[Bug])
   case class ReportDataResponse[T](reportId: String, result: T)
 
-  def props(reportActor: ActorRef, reportWorkersType: WorkersType) = Props(classOf[ReportDataBuilder], reportActor, reportWorkersType)
+  def props(reportActor: ActorRef, reportWorkersType: WorkersType) = Props(classOf[ReportDataBuilderActor], reportActor, reportWorkersType)
 
   def report(date: OffsetDateTime, notes: String, reportData: List[ReportField]): model.ReportData = {
     model.ReportData("bug-reports",

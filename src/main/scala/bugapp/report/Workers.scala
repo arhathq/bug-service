@@ -2,6 +2,7 @@ package bugapp.report
 
 import akka.actor.{ActorContext, ActorRef}
 import bugapp.report.ReportTypes.{ReportType, SlaReport, WeeklyReport}
+import bugapp.report.japi.{AllOpenBugsNumberByPriorityJActor, TopAssigneesJActor}
 import bugapp.repository.FileEmployeeRepository
 
 /**
@@ -31,7 +32,8 @@ class ReportWorkers(context: ActorContext) extends Workers {
 
   override def create(reportType: ReportType): Set[ActorRef] = reportType match {
     case WeeklyReport => Set(
-      context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
+//      context.actorOf(AllOpenBugsNumberByPriorityActor.props(self)),
+      context.actorOf(AllOpenBugsNumberByPriorityJActor.props(self)),
       context.actorOf(AllOpenBugsNumberByPriorityChartActor.props(self)),
       context.actorOf(OpenTopBugListActor.props(self)),
       context.actorOf(ReportersBugNumberByPeriodActor.props(self, employeeRepository, 15)),
@@ -39,7 +41,8 @@ class ReportWorkers(context: ActorContext) extends Workers {
       context.actorOf(PrioritizedBugNumberByThisWeekActor.props(self)),
       context.actorOf(OpenBugsNumberByProductActor.props(self)),
       context.actorOf(BugsByPeriodChartActor.props(self, 15)),
-      context.actorOf(TopAssigneesActor.props(self)),
+//      context.actorOf(TopAssigneesActor.props(self)),
+      context.actorOf(TopAssigneesJActor.props(self)),
       context.actorOf(WeeklySummaryReportActor.props(self)),
       context.actorOf(WeeklySummaryChartActor.props(self))
     )

@@ -1,7 +1,7 @@
 package bugapp.report
 
 import akka.actor.{Actor, ActorRef}
-import bugapp.report.ReportDataBuilder.ReportDataRequest
+import bugapp.report.ReportDataBuilderActor.ReportDataRequest
 
 /**
   *

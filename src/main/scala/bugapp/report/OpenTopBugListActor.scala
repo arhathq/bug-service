@@ -2,7 +2,7 @@ package bugapp.report
 
 import akka.actor.{ActorLogging, ActorRef, Props}
 import bugapp.bugzilla.Metrics
-import bugapp.report.ReportDataBuilder.{ReportDataRequest, ReportDataResponse}
+import bugapp.report.ReportDataBuilderActor.{ReportDataRequest, ReportDataResponse}
 import bugapp.report.ReportActor.dateTimeFormat
 import bugapp.report.model._
 import bugapp.repository.Bug

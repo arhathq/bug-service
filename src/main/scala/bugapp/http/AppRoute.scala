@@ -56,13 +56,12 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
         }
       }
     } ~
-    path("mail" / Segment) { mailType =>
+    path("mail" / Segment / "weeks" / IntNumber) { (mailType, weeks) =>
       post {
         val reportDuration = 90.seconds
         withRequestTimeout(reportDuration) {
           extractRequest { req =>
             implicit val timeout = Timeout(reportDuration)
-            val weeks = 15
             sendResponse((reportSender ? SendWeeklyReport(weeks)).mapTo[Ack])
           }
         }
