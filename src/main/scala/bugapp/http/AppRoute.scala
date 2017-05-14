@@ -12,7 +12,7 @@ import bugapp.BugApp
 import bugapp.Implicits._
 import bugapp.report.OnlineReportActor.{CloseConversation, GetOnlineReport, JoinActor}
 import bugapp.report.ReportActor._
-import bugapp.report.ReportSender.{Ack, SendWeeklyReport}
+import bugapp.report.ReportSender.{Ack, MailDetails, SendWeeklyReport}
 import bugapp.report.converter.JsonReportDataConverter
 import bugapp.report.{ReportTypes, model}
 import bugapp.repository.BugRepository
@@ -60,9 +60,9 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
       post {
         val reportDuration = 90.seconds
         withRequestTimeout(reportDuration) {
-          extractRequest { req =>
+          entity(as[MailDetails]) { mailDetails =>
             implicit val timeout = Timeout(reportDuration)
-            sendResponse((reportSender ? SendWeeklyReport(weeks)).mapTo[Ack])
+            sendResponse((reportSender ? SendWeeklyReport(weeks, mailDetails)).mapTo[Ack])
           }
         }
       }
