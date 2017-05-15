@@ -12,7 +12,8 @@ import bugapp.BugApp
 import bugapp.Implicits._
 import bugapp.report.OnlineReportActor.{CloseConversation, GetOnlineReport, JoinActor}
 import bugapp.report.ReportActor._
-import bugapp.report.ReportSender.{Ack, MailDetails, SendWeeklyReport}
+import bugapp.report.ReportSender.{Ack, MailDetails, SendSlaReport, SendWeeklyReport}
+import bugapp.report.ReportTypes.{SlaReport, WeeklyReport}
 import bugapp.report.converter.JsonReportDataConverter
 import bugapp.report.{ReportTypes, model}
 import bugapp.repository.BugRepository
@@ -50,7 +51,12 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
                 implicit val timeout = Timeout(reportDuration)
                 val endDate = BugApp.toDate
                 val startDate = BugApp.fromDate(endDate, weeks)
-                sendResponse(ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult])
+
+                val fResult = ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult].map { result =>
+                  if (result.report.isDefined) Right(result.report)
+                  else Left(result.error)
+                }
+                sendEither(fResult)
             }
           }
         }
@@ -61,8 +67,17 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
         val reportDuration = 90.seconds
         withRequestTimeout(reportDuration) {
           entity(as[MailDetails]) { mailDetails =>
-            implicit val timeout = Timeout(reportDuration)
-            sendResponse((reportSender ? SendWeeklyReport(weeks, mailDetails)).mapTo[Ack])
+            ReportTypes.from(mailType) match {
+              case Left(error) => sendResponse(Future.failed(new RuntimeException(error)))
+              case Right(reportType) =>
+                implicit val timeout = Timeout(reportDuration)
+                reportType match {
+                  case WeeklyReport =>
+                    sendResponse((reportSender ? SendWeeklyReport(weeks, mailDetails)).mapTo[Ack])
+                  case SlaReport =>
+                    sendResponse((reportSender ? SendSlaReport(weeks, mailDetails)).mapTo[Ack])
+                }
+            }
           }
         }
       }

@@ -20,9 +20,8 @@ class ReportGenerator(fopConf: String, reportDir: String, reportActor: ActorRef)
   override def receive: Receive = {
     case GenerateReport(reportId, reportName, reportTemplate, reportData) =>
       val output = reportGenerator.generate(inputStream(reportData), inputStream(reportTemplate))
-      UtilsIO.write(reportName, output)
       log.debug(s"Report $reportName created")
-      reportActor ! ReportGenerated(Report(reportId, reportName, contentType, output))
+      reportActor ! ReportGenerated(Report(reportId, reportName, formatType, output))
   }
 
   override def preRestart(reason: Throwable, message: Option[Any]): Unit = {
@@ -51,6 +50,6 @@ object ReportGenerator {
     new ByteArrayInputStream(outputStream.toByteArray)
   }
 
-  def contentType: String = "application/pdf"
+  def formatType: String = "pdf"
 
 }

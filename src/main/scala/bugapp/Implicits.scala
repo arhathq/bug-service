@@ -2,7 +2,11 @@ package bugapp
 
 import java.time.{LocalDate, OffsetDateTime}
 
+import akka.http.scaladsl.marshalling.{Marshaller, ToResponseMarshaller}
+import akka.http.scaladsl.model._
 import bugapp.bugzilla._
+import bugapp.report.ReportActor.Report
+import bugapp.report.ReportSender.MailDetails
 import bugapp.repository._
 import io.circe.generic.semiauto._
 import io.circe.{Decoder, Encoder, Printer}
@@ -34,16 +38,6 @@ object Implicits {
 
   implicit val decoderBug: Decoder[Bug] = deriveDecoder[Bug]
   implicit val encoderBug: Encoder[Bug] = deriveEncoder[Bug]
-/*
-  implicit val decoderBugStats: Decoder[BugStats] = deriveDecoder[BugStats]
-  implicit val encoderBugStats: Encoder[BugStats] = deriveEncoder[BugStats]
-  implicit val decoderBugHistory: Decoder[BugHistory] = deriveDecoder[BugHistory]
-  implicit val encoderBugHistory: Encoder[BugHistory] = deriveEncoder[BugHistory]
-  implicit val decoderBugHistoryItem: Decoder[HistoryItem] = deriveDecoder[HistoryItem]
-  implicit val encoderBugHistoryItem: Encoder[HistoryItem] = deriveEncoder[HistoryItem]
-  implicit val decoderBugHistoryItemChange: Decoder[HistoryItemChange] = deriveDecoder[HistoryItemChange]
-  implicit val encoderBugHistoryItemChange: Encoder[HistoryItemChange] = deriveEncoder[HistoryItemChange]
-*/
 
   implicit val encoderBugCreatedEvent: Encoder[BugCreatedEvent] = deriveEncoder[BugCreatedEvent]
   implicit val decoderBugCreatedEvent: Decoder[BugCreatedEvent] = deriveDecoder[BugCreatedEvent]
@@ -115,5 +109,14 @@ object Implicits {
       or(Decoder[BugCommentedEvent].map[BugEvent](identity))
   }
 
+  implicit val decoderMailDetails: Decoder[MailDetails] = deriveDecoder[MailDetails]
+  implicit val encoderMailDetails: Encoder[MailDetails] = deriveEncoder[MailDetails]
+
   implicit val jsonPrinter: Printer = Printer(preserveOrder = true, dropNullKeys = true, indent = "")
+
+  implicit def reportMarshaller: ToResponseMarshaller[Report] =  Marshaller.oneOf(
+    Marshaller.withFixedContentType(MediaTypes.`application/pdf`) { report ⇒
+      HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/pdf`), report.data))
+    }
+  )
 }

@@ -4,6 +4,7 @@ import java.io.ByteArrayInputStream
 import java.time.OffsetDateTime
 import java.time.format.DateTimeFormatter
 import java.util.UUID
+import javax.activation.MimeType
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
 import bugapp.BugApp
@@ -59,7 +60,7 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
 
   private def sendWeeklyReportMail(report: Report, mailDetails: MailDetails) = {
     val is = new ByteArrayInputStream(report.data)
-    val attachment = new Attachment("WeeklyReport.pdf", report.contentType, is)
+    val attachment = new Attachment("WeeklyReport.pdf", new MimeType("application", report.formatType).getBaseType, is)
 
     val subject = s"ProdSupport Weekly Report - ${OffsetDateTime.now.format(DateTimeFormatter.ISO_DATE)}"
     val text =
@@ -75,7 +76,7 @@ class ReportSender(val reportActor: ActorRef, val mailerActor: ActorRef) extends
 
   private def sendSlaReportMail(report: Report, mailDetails: MailDetails) = {
     val is = new ByteArrayInputStream(report.data)
-    val attachment = new Attachment("SlaReport.pdf", report.contentType, is)
+    val attachment = new Attachment("SlaReport.pdf", new MimeType("application", report.formatType).getBaseType, is)
 
     val subject = s"ProdSupport Sla Report - ${OffsetDateTime.now.format(DateTimeFormatter.ISO_DATE)}"
     val text =

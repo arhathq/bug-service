@@ -26,6 +26,22 @@ trait ResponseSupport extends CirceSupport with LoggerSupport {
         complete(ToResponseMarshallable(InternalServerError → ErrorMessage(e.getMessage)))
     }
   }
+
+  def sendEither[E, T](r: Future[Either[E, T]])(implicit marshaller: T ⇒ ToResponseMarshallable): Route = {
+    onComplete(r) {
+      case Success(result) ⇒ result match {
+        case Left(e) =>
+          logger.error(s"Error: ${e.toString}")
+          complete(ToResponseMarshallable(InternalServerError → ErrorMessage(e.toString)))
+        case Right(v) =>
+          logger.debug(s"Response: $v")
+          complete(v)
+      }
+      case Failure(e) ⇒
+        logger.error(s"Error: ${e.toString}")
+        complete(ToResponseMarshallable(InternalServerError → ErrorMessage(e.getMessage)))
+    }
+  }
 }
 
 case class ErrorMessage(error: String)

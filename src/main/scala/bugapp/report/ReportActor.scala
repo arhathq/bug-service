@@ -141,7 +141,7 @@ object ReportActor {
   case class ReportGenerated(report: Report) extends ReportEvent
   case class ReportError(reportId: String, message: String) extends ReportEvent
 
-  case class Report(reportId: String, name: String, contentType: String, data: Array[Byte])
+  case class Report(reportId: String, name: String, formatType: String, data: Array[Byte])
 }
 
 object ReportParams {
