@@ -44,20 +44,19 @@ class AppRoute(val bugRepository: BugRepository, val reportActor: ActorRef, val 
       get {
         val reportDuration = 90.seconds
         withRequestTimeout(reportDuration) {
-          extractRequest { req =>
-            ReportTypes.from(reportName) match {
-              case Left(error) => sendResponse(Future.failed(new RuntimeException(error)))
-              case Right(reportType) =>
-                implicit val timeout = Timeout(reportDuration)
-                val endDate = BugApp.toDate
-                val startDate = BugApp.fromDate(endDate, weeks)
+          ReportTypes.from(reportName) match {
+            case Left(error) => sendResponse(Future.failed(new RuntimeException(error)))
+            case Right(reportType) =>
+              implicit val timeout = Timeout(reportDuration)
+              val endDate = BugApp.toDate
+              val startDate = BugApp.fromDate(endDate, weeks)
 
-                val fResult = ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult].map { result =>
-                  if (result.report.isDefined) Right(result.report)
-                  else Left(result.error)
+              sendResponse {
+                ask(reportActor, GetReport(reportType, startDate, endDate, weeks)).mapTo[ReportResult].map { result =>
+                  if (result.report.isDefined) Right(result.report.get)
+                  else Left(result.error.get)
                 }
-                sendEither(fResult)
-            }
+              }
           }
         }
       }
