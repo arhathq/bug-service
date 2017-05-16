@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Reports</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+
+    <link rel="stylesheet" href="styles/bootstrap.css"/>
+</head>
+<body>
+<div class="container">
+    <div class="page-header">
+        <h1>Production Support <small>Reports Page</small></h1>
+    </div>
+    <div class="row">
+        <div class="col-xs-4">
+            <h3></h3>
+            <p>
+                <form>
+                    <div class="form-group">
+                        <label for="email">Email address:</label>
+                        <input type="email" class="form-control" id="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="reportType">Report Type:</label>
+                        <select class="form-control" id="reportType">
+                            <option name="Weekly">weekly</option>
+                            <option name="SLA">sla</option>
+                        </select>
+                    </div>
+                </form>
+                <a href="#" class="btn btn-success" id="sendReportHref">Send Report</a>
+                <a href="#" class="btn btn-primary" id="getReportHref">Get Report</a>
+            </p>
+        </div>
+    </div>
+    <hr>
+</div>
+
+<script src="scripts/rx.js"></script>
+<script src="scripts/rx.dom.js"></script>
+<script src="scripts/jquery.min.js"></script>
+<script src="scripts/app.js"></script>
+<script>
+    BugApp.reports = {
+        getReport: function() {
+            return $.ajax({
+                url : BugApp.Params.getReportUrl,
+                success : function(resp) {
+                    console.log(resp);
+                },
+                error : function(resp) {
+                    console.error(resp);
+                }
+            });
+        },
+
+        sendReport: function() {
+            return $.ajax({
+                url : BugApp.Params.sendReportUrl,
+                success : function(resp) {
+                },
+                error : function(resp) {
+                }
+            });
+        }
+    };
+
+    $("#getReportHref").on('click', function() {
+        console.log("Hi there");
+        BugApp.reports.getReport();
+        return false;
+    });
+</script>
+
+</body>
+</html>
