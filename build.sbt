@@ -20,6 +20,7 @@ libraryDependencies ++= {
     "com.typesafe.akka"      %% "akka-http"                         % akkaHttpVersion,
     "com.typesafe.akka"      %% "akka-slf4j"                        % akkaVersion,
     "com.typesafe.akka"      %% "akka-stream"                       % akkaVersion,
+    "com.typesafe.akka"      %% "akka-testkit"                      % akkaVersion,
 
     "com.enragedginger"      %% "akka-quartz-scheduler"             % "1.6.0-akka-2.4.x",
 
