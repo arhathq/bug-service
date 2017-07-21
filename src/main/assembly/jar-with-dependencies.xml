@@ -1,0 +1,74 @@
+<assembly>
+    <id>bug-service</id>
+    <formats>
+        <format>tar.gz</format>
+    </formats>
+    <includeBaseDirectory>false</includeBaseDirectory>
+    <fileSets>
+
+        <fileSet>
+            <directory>${basedir}/target/bug-service</directory>
+            <outputDirectory>bug-service</outputDirectory>
+            <includes>
+                <include>*.*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/bin</directory>
+            <outputDirectory>bug-service</outputDirectory>
+            <includes>
+                <include>**/*.*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/target</directory>
+            <outputDirectory>bug-service</outputDirectory>
+            <includes>
+                <include>bug-service.jar</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/target/lib</directory>
+            <outputDirectory>bug-service/lib</outputDirectory>
+            <includes>
+                <include>*.jar</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/repo</directory>
+            <outputDirectory>bug-service/repo</outputDirectory>
+            <includes>
+                <include>**/employees.txt</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/repo</directory>
+            <outputDirectory>bug-service/logs</outputDirectory>
+            <excludes>
+                <exclude>*.*</exclude>
+            </excludes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/templates</directory>
+            <outputDirectory>bug-service/templates</outputDirectory>
+            <includes>
+                <include>**/*.*</include>
+            </includes>
+        </fileSet>
+
+        <fileSet>
+            <directory>${basedir}/ui</directory>
+            <outputDirectory>bug-service/ui</outputDirectory>
+            <includes>
+                <include>**/*.*</include>
+            </includes>
+        </fileSet>
+
+    </fileSets>
+</assembly>

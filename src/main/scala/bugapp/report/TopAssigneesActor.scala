@@ -10,6 +10,8 @@ import bugapp.report.model._
   * @author Alexander Kuleshov
   */
 class TopAssigneesActor(owner: ActorRef) extends ReportWorker(owner) with ActorLogging {
+  import TopAssigneesActor._
+
   private implicit val execution = context.dispatcher
 
   def receive: Receive = {
@@ -30,7 +32,7 @@ class TopAssigneesActor(owner: ActorRef) extends ReportWorker(owner) with ActorL
 
   def topBugsAssigneeData(assignee: (String, Int)): MapValue = {
     MapValue(
-      ReportField("name", StringValue(assignee._1)),
+      ReportField("name", StringValue(formatUsername(assignee._1))),
       ReportField("count", IntValue(assignee._2))
     )
   }
@@ -38,4 +40,6 @@ class TopAssigneesActor(owner: ActorRef) extends ReportWorker(owner) with ActorL
 
 object TopAssigneesActor {
   def props(owner: ActorRef) = Props(classOf[TopAssigneesActor], owner)
+
+  private def formatUsername(assignee: String) = assignee.split("@").head.toLowerCase
 }

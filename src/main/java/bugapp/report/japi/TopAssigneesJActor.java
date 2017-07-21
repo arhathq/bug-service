@@ -47,7 +47,7 @@ public class TopAssigneesJActor extends JavaReportActor {
         List<ReportValueBuilder> assignees = topBugAssignees.entrySet().stream().
                 limit(15).
                 map(entry -> ReportValueBuilder.mapValue().
-                        withField(ReportFieldBuilder.createFor("name").withValue(ReportValueBuilder.stringValue(entry.getKey()))).
+                        withField(ReportFieldBuilder.createFor("name").withValue(ReportValueBuilder.stringValue(formatUsername(entry.getKey())))).
                         withField(ReportFieldBuilder.createFor("count").withValue(ReportValueBuilder.intValue(entry.getValue().intValue())))).
                 collect(toList());
 
@@ -58,6 +58,10 @@ public class TopAssigneesJActor extends JavaReportActor {
                                 withValue(ReportValueBuilder.listValue().withValues(assignees))
                 ).
                 build();
+    }
+
+    private String formatUsername(String assignee) {
+        return assignee.split("@")[0].toLowerCase();
     }
 
     /**

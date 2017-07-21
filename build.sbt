@@ -8,7 +8,7 @@ mainClass in Compile := Some("bugapp.BugApp")
 
 libraryDependencies ++= {
   val akkaVersion         = "2.4.17"
-  val akkaHttpVersion     = "10.0.3"
+  val akkaHttpVersion     = "10.0.6"
   val circeVersion        = "0.7.0"
   val scalaTestVersion    = "2.2.6"
   val scalaAsyncVersion   = "0.9.5"
@@ -48,7 +48,9 @@ libraryDependencies ++= {
     "org.scala-lang.modules" %% "scala-xml"                         % scalaXmlVersion,
     "org.scalatest"          %% "scalatest"                         % scalaTestVersion     % "test",
 
-    "junit"                   % "junit"                             % "4.11"               % "test",
+    "junit"                   % "junit"                             % "4.12"               % "test",
+    "org.powermock"           % "powermock-api-mockito"             % "1.6.6"              % "test",
+    "org.powermock"           % "powermock-module-junit4"           % "1.6.6"              % "test",
 
     "com.sun.mail"            % "javax.mail"                        % "1.5.5"
   )

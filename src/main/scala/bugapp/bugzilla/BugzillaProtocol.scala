@@ -113,7 +113,7 @@ object Metrics {
   val ResolvedIn365Days = "91-365 days"
   val ResolvedInMoreThan365Days = " > 1 year"
 
-  val resolvedStatuses = List("RESOLVED", "VERIFIED", "CLOSED")
+  val resolvedStatuses = List("RESOLVED", "VERIFIED", "CLOSED", "READY FOR TESTING", "TESTING IN PROGRESS")
   val invalidResolutions = List("INVALID", "WORKSFORME", "DUPLICATE", "WONTFIX")
 
   def getStatus(status: String, resolution: String): String = {
@@ -191,14 +191,14 @@ object Metrics {
       takeWhile(date => date.isBefore(endDate) || date.toLocalDate.isEqual(endDate.toLocalDate)).toSeq
   }
 
-  val marksByDates: (OffsetDateTime, OffsetDateTime) => Seq[String] = (startDate, endDate) => {
+  def marksByDates(startDate: OffsetDateTime, endDate: OffsetDateTime): Seq[String] = {
     val duration = Duration.between(startDate, endDate).toDays
     val weeks = ((duration / 7) + Math.round(duration % 7)).toInt
     val week = endDate.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
     (week to (week - weeks) by -1).map(w => weeksStrFormat.format(endDate.minusWeeks(week - w))).reverse
   }
 
-  val marks: (OffsetDateTime, Int) => Seq[String] = (date, weeks) => {
+  def marks(date: OffsetDateTime, weeks: Int): Seq[String] = {
     val week = date.get(IsoFields.WEEK_OF_WEEK_BASED_YEAR)
     (week to (week - weeks + 1) by -1).map(w => weeksStrFormat.format(date.minusWeeks(week - w))).reverse
   }

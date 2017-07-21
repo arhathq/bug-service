@@ -4,7 +4,6 @@ import java.io._
 import java.net.URI
 
 import akka.actor.{Actor, ActorLogging, ActorRef, Props}
-import bugapp.UtilsIO
 import bugapp.report.ReportActor.{Report, ReportError, ReportGenerated}
 
 import scala.xml.{Elem, XML}

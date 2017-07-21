@@ -43,5 +43,6 @@ public class ReportDataBuilderTest extends TestCase {
                 build();
 
         assertEquals(data.name(), "empty-bugs");
+        assertEquals(data.fields().fieldsList().size(), 7);
     }
 }

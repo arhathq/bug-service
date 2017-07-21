@@ -132,6 +132,37 @@ public class ReportActorTest {
         }};
     }
 
+    @Test
+    public void testBugsByPeriodChartJActor() {
+
+        new JavaTestKit(system) {{
+            final TestProbe probe = new TestProbe(system);
+
+            int weeks = 15;
+            final Props props = BugsByPeriodChartJActor.props(probe.ref(), weeks);
+            final ActorRef reportActor = system.actorOf(props);
+
+            List<Bug> bugs = new ArrayList<>();
+            bugs.add(
+                    BugBuilder.createWithId(1).withOpened(OffsetDateTime.now().minusMonths(2)).
+                            withPriority("P2").withAssignee("user1@domain").build()
+            );
+
+            Map<String, Object> params = new HashMap<>();
+            params.put(ReportParams.EndDate(), OffsetDateTime.now());
+
+            reportActor.tell(ReportActorHelper.createRequest(bugs, params), probe.ref());
+
+            final ReportDataBuilderActor.ReportDataResponse message = probe.expectMsgClass(ReportDataBuilderActor.ReportDataResponse.class);
+
+            assertTrue(message.result() instanceof ReportData);
+
+            final ReportData reportData = (ReportData) message.result();
+
+            assertTrue(("bugs-by-weeks-" + weeks).equals(reportData.name()));
+        }};
+    }
+
     public static class ReportActorHelper {
         static ReportDataBuilderActor.ReportDataRequest createRequest(final List<Bug> bugs, final Map<String, Object> reportParams) {
             final String requestId = UUID.randomUUID().toString();

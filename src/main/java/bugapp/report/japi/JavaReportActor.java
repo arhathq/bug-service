@@ -1,6 +1,6 @@
 package bugapp.report.japi;
 
-import akka.actor.AbstractActor;
+import akka.actor.AbstractLoggingActor;
 import akka.actor.ActorRef;
 import akka.japi.pf.ReceiveBuilder;
 import bugapp.report.ReportDataBuilderActor;
@@ -16,7 +16,7 @@ import java.util.Map;
  *
  * @author Alexander Kuleshov
  */
-public abstract class JavaReportActor extends AbstractActor {
+public abstract class JavaReportActor extends AbstractLoggingActor {
 
     private ActorRef owner;
 

@@ -12,13 +12,15 @@
 <body>
 <div class="container">
     <div class="page-header">
-        <h1>Production Support <small>Reports Page</small></h1>
+        <h1>Reports Page</h1>
     </div>
     <div class="row">
-        <div class="col-xs-4">
+        <div class="col-xs-6">
             <h3></h3>
             <p>
             <form>
+                <div id="alert" class="alert">
+                </div>
                 <div class="form-group">
                     <label for="email">Email address:</label>
                     <input type="email" class="form-control" id="email">
@@ -42,16 +44,13 @@
 <script src="scripts/rx.js"></script>
 <script src="scripts/rx.dom.js"></script>
 <script src="scripts/jquery.min.js"></script>
-<!--<script src="scripts/app.js"></script>-->
+<script src="scripts/app.js"></script>
 <script>
 
-    BugApp = {};
-
-    BugApp.Params = {
-        onlineUrl: 'ws://localhost:9000/api/online/sla',
-        getReportUrl: 'http://localhost:9000/api/report/',
-        sendReportUrl: 'http://localhost:9000/api/mail/',
-        report: {
+    BugApp.reports = {
+        getReportUrl: 'http://' + BugApp.Params.host + ':' + BugApp.Params.port + '/api/report/',
+        sendReportUrl: 'http://' + BugApp.Params.host + ':' + BugApp.Params.port + '/api/mail/',
+        config: {
             sla: {
                 weeks: 5
             },
@@ -63,24 +62,32 @@
             return $("#reportType option:selected").text();
         },
         paramString: function(reportType) {
-            var params = BugApp.Params.report[reportType];
+            var params = this.config[reportType];
             var s = '/';
             for (var key in params) {
                 s = s + key + '/' +  params[key] + '/';
             }
             return s.substring(0, s.length - 1);
-        }
-    };
+        },
+        validateEmail: function(email) {
+            var re = /^(([^<>()\[\]\\.,;:\s@"]+(\.[^<>()\[\]\\.,;:\s@"]+)*)|(".+"))@((\[[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}\.[0-9]{1,3}])|(([a-zA-Z\-0-9]+\.)+[a-zA-Z]{2,}))$/;
+            return re.test(email);
+        },
+        message: function(text, style) {
+            var message = $("#alert");
+            message.removeClass();
+            message.addClass(style);
+            message.text(text);
 
-    BugApp.reports = {
+        },
         getReport: function(reportType) {
             return $.ajax({
-                url : BugApp.Params.getReportUrl + reportType + BugApp.Params.paramString(reportType),
+                url : this.getReportUrl + reportType + this.paramString(reportType),
                 type: 'GET',
                 crossDomain: true,
-                dataType: 'text',
+                dataType: 'binary',
                 success : function(resp, status, xhr) {
-                    console.log();
+                    BugApp.reports.message("Report has been generated", "alert alert-success");
 
                     var file = new Blob([resp], { type: xhr.getResponseHeader('Content-Type') });
                     var URL = window.URL || window.webkitURL;
@@ -92,39 +99,59 @@
                     link.download = "report.pdf";
                     link.click();
 
-                    setTimeout(function () { URL.revokeObjectURL(fileUrl); /*document.body.removeChild(link); */}, 100); // cleanup
+                    setTimeout(function () { URL.revokeObjectURL(fileUrl); document.body.removeChild(link); }, 100); // cleanup
+                    $("#getReportHref").disable(false);
                 },
                 error : function(xhr, status, err) {
-                    console.error(err);
+                    BugApp.reports.message("Report hasn't been generated", "alert alert-danger");
+                    console.error(this.url);
+                    $("#getReportHref").disable(false);
                 }
             });
         },
 
-        sendReport: function(reportType) {
+        sendReport: function(email, reportType) {
             return $.ajax({
-                url : BugApp.Params.sendReportUrl + reportType + BugApp.Params.paramString(reportType),
+                url : this.sendReportUrl + reportType + this.paramString(reportType),
                 type: 'POST',
                 crossDomain: true,
                 contentType: 'application/json',
                 dataType: 'json',
-                data: '{"to": ["a@a.aa"], "from": "noreply@b.bb", "cc" : []}',
+                data: JSON.stringify({
+                    to: [email],
+                    from: BugApp.Params.mailFrom,
+                    cc: []
+                }),
                 success : function(resp, status, xhr) {
+                    BugApp.reports.message("Mail has been sent", "alert alert-success");
                     console.log(resp);
+                    $("#sendReportHref").disable(false);
                 },
                 error : function(xhr, status, err) {
+                    BugApp.reports.message("Mail hasn't sent", "alert alert-danger");
                     console.error(err);
+                    $("#sendReportHref").disable(false);
                 }
             });
         }
     };
 
     $("#getReportHref").on('click', function() {
-        BugApp.reports.getReport(BugApp.Params.selectedReport());
+        BugApp.reports.message("Loading...", "alert alert-info");
+        $("#getReportHref").disable(true);
+        BugApp.reports.getReport(BugApp.reports.selectedReport());
         return false;
     });
 
     $("#sendReportHref").on('click', function() {
-        BugApp.reports.sendReport(BugApp.Params.selectedReport());
+        $("#sendReportHref").disable(true);
+        var email = $("#email").val();
+        if (BugApp.reports.validateEmail(email)) {
+            BugApp.reports.sendReport(email, BugApp.reports.selectedReport());
+        } else {
+            BugApp.reports.message("Incorrect email", "alert alert-danger");
+            $("#sendReportHref").disable(false);
+        }
         return false;
     });
 </script>

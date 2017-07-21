@@ -5,6 +5,7 @@ import java.time.{LocalDate, OffsetDateTime}
 import akka.http.scaladsl.marshalling.{Marshaller, ToResponseMarshaller}
 import akka.http.scaladsl.model._
 import akka.http.scaladsl.model.StatusCodes._
+import akka.http.scaladsl.model.headers.ContentDispositionTypes
 import bugapp.bugzilla._
 import bugapp.report.ReportActor.{Report, ReportError}
 import bugapp.report.ReportSender.MailDetails
@@ -72,10 +73,16 @@ object Implicits {
   implicit val decoderBugMarkedAsProductionEvent: Decoder[BugMarkedAsProductionEvent] = deriveDecoder[BugMarkedAsProductionEvent]
   implicit val encoderBugCommentedEvent: Encoder[BugCommentedEvent] = deriveEncoder[BugCommentedEvent]
   implicit val decoderBugCommentedEvent: Decoder[BugCommentedEvent] = deriveDecoder[BugCommentedEvent]
+  implicit val encoderBugReadyForTestingEvent: Encoder[BugReadyForTestingEvent] = deriveEncoder[BugReadyForTestingEvent]
+  implicit val decoderBugReadyForTestingEvent: Decoder[BugReadyForTestingEvent] = deriveDecoder[BugReadyForTestingEvent]
+  implicit val encoderBugTestingInProgressEvent: Encoder[BugTestingInProgressEvent] = deriveEncoder[BugTestingInProgressEvent]
+  implicit val decoderBugTestingInProgressEvent: Decoder[BugTestingInProgressEvent] = deriveDecoder[BugTestingInProgressEvent]
 
   implicit val encoderBugEvent: Encoder[BugEvent] = Encoder.instance {
     case e @ BugCreatedEvent(_, _, _, _) => e.asJson
     case e @ BugResolvedEvent(_, _, _, _) => e.asJson
+    case e @ BugReadyForTestingEvent(_, _, _, _) => e.asJson
+    case e @ BugTestingInProgressEvent(_, _, _, _) => e.asJson
     case e @ BugClosedEvent(_, _, _, _) => e.asJson
     case e @ BugReopenedEvent(_, _, _, _) => e.asJson
     case e @ BugInProgressEvent(_, _, _, _) => e.asJson
@@ -94,6 +101,8 @@ object Implicits {
   implicit val decoderBugEvent: Decoder[BugEvent] = {
     Decoder[BugCreatedEvent].map[BugEvent](identity).
       or(Decoder[BugResolvedEvent].map[BugEvent](identity)).
+      or(Decoder[BugReadyForTestingEvent].map[BugEvent](identity)).
+      or(Decoder[BugTestingInProgressEvent].map[BugEvent](identity)).
       or(Decoder[BugClosedEvent].map[BugEvent](identity)).
       or(Decoder[BugReopenedEvent].map[BugEvent](identity)).
       or(Decoder[BugInProgressEvent].map[BugEvent](identity)).
@@ -122,7 +131,8 @@ object Implicits {
       case Left(error) =>
         HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/json`), reportEncoder.apply(error).toString()), status = InternalServerError)
       case Right(report) =>
-        HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/pdf`), report.data))
+        val cth = headers.`Content-Disposition`(ContentDispositionTypes.attachment, Map("filename" -> report.name))
+        HttpResponse(entity = HttpEntity(ContentType(MediaTypes.`application/pdf`), report.data), headers = List(cth))
     }
   )
 }

@@ -50,7 +50,7 @@ case class Bug(id: Int,
 
   val resolvedTime: Option[OffsetDateTime] = actualStatus match {
     case FixedStatus | InvalidStatus => events.filter { event =>
-      event.isInstanceOf[BugResolvedEvent]
+      event.isInstanceOf[BugResolvedEvent] || event.isInstanceOf[BugReadyForTestingEvent]
     }.lastOption match {
       case Some(BugResolvedEvent(_, _, date, _)) => Some(date)
       case _ => None
@@ -99,6 +99,8 @@ case class BugInProgressEvent(eventId: Int, bugId: Int, date: OffsetDateTime, pr
 case class BugCommentedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, commentator: String, comment: String) extends BugEvent
 case class BugReopenedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, reopenedBy: String) extends BugEvent
 case class BugResolvedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, resolvedBy: String) extends BugEvent
+case class BugReadyForTestingEvent(eventId: Int, bugId: Int, date: OffsetDateTime, resolvedBy: String) extends BugEvent
+case class BugTestingInProgressEvent(eventId: Int, bugId: Int, date: OffsetDateTime, testingBy: String) extends BugEvent
 case class BugResolutionChangedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, resolution: String) extends BugEvent
 case class BugSeverityChangedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, severity: String) extends BugEvent
 case class BugClosedEvent(eventId: Int, bugId: Int, date: OffsetDateTime, closedBy: String) extends BugEvent

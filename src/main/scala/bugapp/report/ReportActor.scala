@@ -129,7 +129,7 @@ object ReportActor {
   def createXmlElement(name: String, child: Node*): Elem = Elem.apply(null, name, Null, TopScope, true, child: _*)
 
   def report(dir: String, reportType: ReportType): String =
-    s"$dir/${reportType.name}${reportDateFormat.format(LocalDate.now)}.pdf"
+    s"${reportType.name}${reportDateFormat.format(LocalDate.now)}.pdf"
 
   case class GetReport(reportType: ReportType, startDate: OffsetDateTime, endDate: OffsetDateTime, weekPeriod: Int) {
     val reportId: String = UUID.randomUUID().toString

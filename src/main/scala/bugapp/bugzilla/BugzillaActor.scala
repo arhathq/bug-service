@@ -195,6 +195,8 @@ object BugzillaActor {
     bugHistory.history.foreach { historyItem =>
       historyItem.changes.foreach {
         case BugzillaHistoryChange(_, "RESOLVED", "status") => events :+= BugResolvedEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "READY FOR TESTING", "status") => events :+= BugReadyForTestingEvent(events.length, bug.id, historyItem.when, historyItem.who)
+        case BugzillaHistoryChange(_, "TESTING IN PROGRESS", "status") => events :+= BugTestingInProgressEvent(events.length, bug.id, historyItem.when, historyItem.who)
         case BugzillaHistoryChange(_, "CLOSED", "status") => events :+= BugClosedEvent(events.length, bug.id, historyItem.when, historyItem.who)
         case BugzillaHistoryChange(_, "REOPENED", "status") => events :+= BugReopenedEvent(events.length, bug.id, historyItem.when, historyItem.who)
         case BugzillaHistoryChange(_, "IN_PROGRESS", "status") => events :+= BugInProgressEvent(events.length, bug.id, historyItem.when, historyItem.who)
